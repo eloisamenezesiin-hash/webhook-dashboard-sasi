@@ -1,0 +1,39 @@
+# Variáveis de ambiente (NUNCA subir para o GitHub)
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Relatórios gerados
+reports/
+
+# Build / dist
+*.egg-info/
+dist/
+build/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Dados sensíveis dos apps SASI
+*.db
+*.sqlite
+*.sqlite3
+*.log
+*.csv
+
+# Docker volumes locais
+postgres_data/
+redis_data/
