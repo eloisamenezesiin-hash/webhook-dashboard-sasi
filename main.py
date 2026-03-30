@@ -12,12 +12,17 @@ def get_db():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.json
+    raw = json.dumps(data) if data else request.get_data(as_text=True)
     try:
         conn = get_db()
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO registros (canal, mensagem) VALUES (%s, %s)",
-            (data.get("canal"), data.get("mensagem"))
+            (data.get("canal") if data else None, data.get("mensagem") if data else None)
+        )
+        cur.execute(
+            "INSERT INTO webhook_logs (raw_json) VALUES (%s)",
+            (raw,)
         )
         conn.commit()
         cur.close()
@@ -25,9 +30,8 @@ def webhook():
         return jsonify({"status": "ok", "destino": "banco"}), 200
     except Exception as e:
         with open("fila.txt", "a") as f:
-            f.write(json.dumps(data) + "\n")
+            f.write((raw or json.dumps(data)) + "\n")
         return jsonify({"status": "ok", "destino": "fila", "erro": str(e)}), 200
-
 @app.route("/", methods=["GET"])
 def home():
     try:
@@ -62,110 +66,26 @@ def home():
     <title>Monitoramento SASI - IIN</title>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            color: #333;
-            padding: 20px;
-        }}
-        .header {{
-            background: linear-gradient(135deg, #1a73e8, #0d47a1);
-            color: white;
-            padding: 25px 30px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3);
-        }}
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; padding: 20px; }}
+        .header {{ background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 25px 30px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3); }}
         .header h1 {{ font-size: 24px; margin-bottom: 5px; }}
         .header p {{ opacity: 0.85; font-size: 14px; }}
-        .stats {{
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }}
-        .stat-card {{
-            background: white;
-            padding: 20px 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            flex: 1;
-            min-width: 150px;
-        }}
-        .stat-card .number {{
-            font-size: 32px;
-            font-weight: bold;
-            color: #1a73e8;
-        }}
-        .stat-card .label {{
-            font-size: 13px;
-            color: #666;
-            margin-top: 4px;
-        }}
-        .table-container {{
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            overflow: hidden;
-        }}
-        .table-header {{
-            padding: 18px 25px;
-            border-bottom: 1px solid #e8eaed;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }}
+        .stats {{ display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }}
+        .stat-card {{ background: white; padding: 20px 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); flex: 1; min-width: 150px; }}
+        .stat-card .number {{ font-size: 32px; font-weight: bold; color: #1a73e8; }}
+        .stat-card .label {{ font-size: 13px; color: #666; margin-top: 4px; }}
+        .table-container {{ background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }}
+        .table-header {{ padding: 18px 25px; border-bottom: 1px solid #e8eaed; display: flex; justify-content: space-between; align-items: center; }}
         .table-header h2 {{ font-size: 18px; color: #333; }}
-        .refresh-btn {{
-            background: #1a73e8;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            text-decoration: none;
-        }}
+        .refresh-btn {{ background: #1a73e8; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; text-decoration: none; }}
         .refresh-btn:hover {{ background: #1557b0; }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-        }}
-        th {{
-            background: #f8f9fa;
-            padding: 12px 20px;
-            text-align: left;
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #666;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }}
-        td {{
-            padding: 12px 20px;
-            border-top: 1px solid #f0f0f0;
-            font-size: 14px;
-        }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th {{ background: #f8f9fa; padding: 12px 20px; text-align: left; font-size: 12px; text-transform: uppercase; color: #666; font-weight: 600; letter-spacing: 0.5px; }}
+        td {{ padding: 12px 20px; border-top: 1px solid #f0f0f0; font-size: 14px; }}
         tr:hover {{ background: #f8f9ff; }}
-        .badge {{
-            background: #e8f0fe;
-            color: #1a73e8;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
-        }}
-        .empty {{
-            text-align: center;
-            padding: 50px;
-            color: #999;
-        }}
-        .footer {{
-            text-align: center;
-            margin-top: 20px;
-            font-size: 12px;
-            color: #999;
-        }}
+        .badge {{ background: #e8f0fe; color: #1a73e8; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }}
+        .empty {{ text-align: center; padding: 50px; color: #999; }}
+        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #999; }}
     </style>
 </head>
 <body>
