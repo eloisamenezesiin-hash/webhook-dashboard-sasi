@@ -105,7 +105,9 @@ def home():
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; padding: 20px; }}
-        .header {{ background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 25px 30px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(26,115,232,0.3); display: flex; justify-content: space-between; align-items: center; }}
+        .header {{ background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 15px 30px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(26,115,232,0.3); display: flex; justify-content: space-between; align-items: center; }}
+            .header-left {{ display: flex; align-items: center; gap: 20px; }}
+            .header-logo svg {{ height: 90px; width: auto; }}
         .header h1 {{ font-size: 24px; margin-bottom: 5px; }}
         .header p {{ opacity: 0.85; font-size: 14px; }}
         .refresh-btn {{ background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; text-decoration: none; }}
@@ -128,19 +130,19 @@ def home():
     </style>
 </head>
 <body>
-    <div class="logo-banner">
-            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MDAgMjAwIiB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCI+CiAgPGRlZnM+CiAgICA8cGF0aCBpZD0idG9wQXJjIiBkPSJNIDUwLDEzMCBRIDIwMCwxMCAzNTAsMTMwIiBmaWxsPSJub25lIi8+CiAgICA8cGF0aCBpZD0iYm90dG9tQXJjIiBkPSJNIDYwLDE1NSBRIDIwMCwyMzAgMzQwLDE1NSIgZmlsbD0ibm9uZSIvPgogIDwvZGVmcz4KICA8IS0tIFRvcCBhcmMgdGV4dCAtLT4KICA8dGV4dCBmb250LWZhbWlseT0iR2VvcmdpYSwgc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiMzMzMzNjYiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZXR0ZXItc3BhY2luZz0iMyI+CiAgICA8dGV4dFBhdGggaHJlZj0iI3RvcEFyYyIgc3RhcnRPZmZzZXQ9IjUwJSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VEhFIElJTiBHUk9VUCBPRiBDT01QQU5JRVM8L3RleHRQYXRoPgogIDwvdGV4dD4KICA8IS0tIEFyYyBsaW5lIC0tPgogIDxwYXRoIGQ9Ik0gODAsMTE1IFEgMjAwLDYwIDMyMCwxMTUiIHN0cm9rZT0iIzk5OSIgc3Ryb2tlLXdpZHRoPSIxLjUiIGZpbGw9Im5vbmUiLz4KICA8IS0tIElJTiBMZXR0ZXJzIC0gc3R5bGl6ZWQgdmVydGljYWwgbGluZXMgLS0+CiAgPGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTQ1LCA4NSkiPgogICAgPCEtLSBJIC0tPgogICAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjYiIGhlaWdodD0iNTUiIHJ4PSIxIiBmaWxsPSIjMzMzMzY2Ii8+CiAgICA8IS0tIEkgLS0+CiAgICA8cmVjdCB4PSIyMCIgeT0iMCIgd2lkdGg9IjYiIGhlaWdodD0iNTUiIHJ4PSIxIiBmaWxsPSIjMzMzMzY2Ii8+CiAgICA8IS0tIE4gKHRocmVlIHZlcnRpY2FsIGxpbmVzIHdpdGggY29ubmVjdGluZyBhbmdsZXMpIC0tPgogICAgPHJlY3QgeD0iNDAiIHk9IjAiIHdpZHRoPSI2IiBoZWlnaHQ9IjU1IiByeD0iMSIgZmlsbD0iIzMzMzM2NiIvPgogICAgPHJlY3QgeD0iNTgiIHk9IjAiIHdpZHRoPSI2IiBoZWlnaHQ9IjU1IiByeD0iMSIgZmlsbD0iIzMzMzM2NiIvPgogICAgPHJlY3QgeD0iNzYiIHk9IjAiIHdpZHRoPSI2IiBoZWlnaHQ9IjU1IiByeD0iMSIgZmlsbD0iIzMzMzM2NiIvPgogICAgPCEtLSBEaWFnb25hbCBjb25uZWN0b3IgZm9yIE4gLS0+CiAgICA8cG9seWdvbiBwb2ludHM9IjQwLDAgNDYsMCA4Miw1NSA3Niw1NSIgZmlsbD0iIzMzMzM2NiIvPgogIDwvZz4KICA8IS0tIEJvdHRvbSBhcmMgdGV4dCAtLT4KICA8dGV4dCBmb250LWZhbWlseT0iR2VvcmdpYSwgc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiMzMzMzNjYiIGxldHRlci1zcGFjaW5nPSIyIj4KICAgIDx0ZXh0UGF0aCBocmVmPSIjYm90dG9tQXJjIiBzdGFydE9mZnNldD0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5DUklBVElWSURBREUgwrcgUVVBTElEQURFIMK3IEZJREVMSURBREU8L3RleHRQYXRoPgogIDwvdGV4dD4KPC9zdmc+Cg==" alt="IIN Group of Companies">
-        </div>
-        <div class="header">
-        <div>
-            <h1>Monitoramento IIN</h1>
-            <p>Dashboard em Tempo Real</p>
-        </div>
-        <div class="header-actions">
-                <button class="dark-toggle" onclick="document.body.classList.toggle('dark'); this.textContent = document.body.classList.contains('dark') ? 'Modo Claro' : 'Modo Escuro';">Modo Escuro</button>
+    <div class="header">
+            <div class="header-left">
+                <div class="header-logo"><svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 400 220&quot;><defs><path id=&quot;tA&quot; d=&quot;M 60,125 Q 200,15 340,125&quot; fill=&quot;none&quot;/><path id=&quot;bA&quot; d=&quot;M 70,162 Q 200,242 330,162&quot; fill=&quot;none&quot;/></defs><text font-family=&quot;Georgia,serif&quot; font-size=&quot;15&quot; fill=&quot;rgba(255,255,255,0.9)&quot; font-weight=&quot;bold&quot; letter-spacing=&quot;3&quot;><textPath href=&quot;#tA&quot; startOffset=&quot;50%&quot; text-anchor=&quot;middle&quot;>THE IIN GROUP OF COMPANIES</textPath></text><path d=&quot;M 90,112 Q 200,65 310,112&quot; stroke=&quot;rgba(255,255,255,0.5)&quot; stroke-width=&quot;1.5&quot; fill=&quot;none&quot;/><g transform=&quot;translate(162,82)&quot;><rect x=&quot;0&quot; y=&quot;0&quot; width=&quot;7&quot; height=&quot;55&quot; rx=&quot;2&quot; fill=&quot;white&quot;/><rect x=&quot;20&quot; y=&quot;0&quot; width=&quot;7&quot; height=&quot;55&quot; rx=&quot;2&quot; fill=&quot;white&quot;/><rect x=&quot;44&quot; y=&quot;0&quot; width=&quot;7&quot; height=&quot;55&quot; rx=&quot;2&quot; fill=&quot;white&quot;/><rect x=&quot;60&quot; y=&quot;0&quot; width=&quot;7&quot; height=&quot;55&quot; rx=&quot;2&quot; fill=&quot;white&quot;/><rect x=&quot;76&quot; y=&quot;0&quot; width=&quot;7&quot; height=&quot;55&quot; rx=&quot;2&quot; fill=&quot;white&quot;/><polygon points=&quot;44,0 51,0 83,55 76,55&quot; fill=&quot;white&quot;/></g><text font-family=&quot;Georgia,serif&quot; font-size=&quot;11&quot; fill=&quot;rgba(255,255,255,0.8)&quot; letter-spacing=&quot;2&quot;><textPath href=&quot;#bA&quot; startOffset=&quot;50%&quot; text-anchor=&quot;middle&quot;>CRIATIVIDADE &#xB7; QUALIDADE &#xB7; FIDELIDADE</textPath></text></svg></div>
+                <div>
+                    <h1>Monitoramento IIN</h1>
+                    <p>Dashboard em Tempo Real</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="dark-toggle" onclick="document.body.classList.toggle('dark'); var m=document.getElementById('moonI'),s=document.getElementById('sunI'); if(document.body.classList.contains('dark')){{m.style.display='none';s.style.display='block';}}else{{m.style.display='block';s.style.display='none';}}"><span id="moonI"><svg viewBox=&quot;0 0 24 24&quot; fill=&quot;white&quot; stroke=&quot;none&quot;><path d=&quot;M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z&quot;/></svg></span><span id="sunI" style="display:none"><svg viewBox=&quot;0 0 24 24&quot; fill=&quot;white&quot; stroke=&quot;white&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot;><circle cx=&quot;12&quot; cy=&quot;12&quot; r=&quot;5&quot;/><line x1=&quot;12&quot; y1=&quot;1&quot; x2=&quot;12&quot; y2=&quot;3&quot;/><line x1=&quot;12&quot; y1=&quot;21&quot; x2=&quot;12&quot; y2=&quot;23&quot;/><line x1=&quot;4.22&quot; y1=&quot;4.22&quot; x2=&quot;5.64&quot; y2=&quot;5.64&quot;/><line x1=&quot;18.36&quot; y1=&quot;18.36&quot; x2=&quot;19.78&quot; y2=&quot;19.78&quot;/><line x1=&quot;1&quot; y1=&quot;12&quot; x2=&quot;3&quot; y2=&quot;12&quot;/><line x1=&quot;21&quot; y1=&quot;12&quot; x2=&quot;23&quot; y2=&quot;12&quot;/><line x1=&quot;4.22&quot; y1=&quot;19.78&quot; x2=&quot;5.64&quot; y2=&quot;18.36&quot;/><line x1=&quot;18.36&quot; y1=&quot;5.64&quot; x2=&quot;19.78&quot; y2=&quot;4.22&quot;/></svg></span></button>
                 <a href="/" class="refresh-btn">Atualizar</a>
             </div>
-    </div>
+        </div>
     <div class="stats">
         <div class="stat-card">
             <div class="number">{total}</div>
