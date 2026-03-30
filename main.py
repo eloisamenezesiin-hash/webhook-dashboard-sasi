@@ -51,10 +51,12 @@ def webhook():
     if not _check_rate_limit(client_ip):
         return jsonify({"status": "erro", "mensagem": "Muitas requisições. Tente novamente em breve."}), 429
 
-    # Autenticação via token (se configurado)
+    # Autenticação via token (header ou query param)
     if WEBHOOK_TOKEN:
         auth = request.headers.get("Authorization", "")
         token = auth.replace("Bearer ", "").strip() if auth.startswith("Bearer ") else ""
+        if not token:
+            token = request.args.get("token", "")
         if token != WEBHOOK_TOKEN:
             return jsonify({"status": "erro", "mensagem": "Token inválido"}), 401
 
