@@ -100,7 +100,7 @@ def home():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoramento SASI - IIN</title>
+    <title>Monitoramento IIN</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -130,8 +130,8 @@ def home():
 <body>
     <div class="header">
         <div>
-            <h1>Monitoramento SASI</h1>
-            <p>Instituto Insular de Niteroi - Dashboard em Tempo Real</p>
+            <h1>Monitoramento IIN</h1>
+            <p>Dashboard em Tempo Real</p>
         </div>
         <a href="/" class="refresh-btn">Atualizar</a>
     </div>
