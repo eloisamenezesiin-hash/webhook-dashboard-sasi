@@ -9,7 +9,6 @@ import functools
 app = Flask(__name__)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
-WEBHOOK_TOKEN = os.environ.get("WEBHOOK_TOKEN", "")
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 
 # ── Rate Limiter simples em memória ──────────────────────────────
@@ -50,15 +49,6 @@ def webhook():
     client_ip = request.remote_addr or "unknown"
     if not _check_rate_limit(client_ip):
         return jsonify({"status": "erro", "mensagem": "Muitas requisições. Tente novamente em breve."}), 429
-
-    # Autenticação via token (header ou query param)
-    if WEBHOOK_TOKEN:
-        auth = request.headers.get("Authorization", "")
-        token = auth.replace("Bearer ", "").strip() if auth.startswith("Bearer ") else ""
-        if not token:
-            token = request.args.get("token", "")
-        if token != WEBHOOK_TOKEN:
-            return jsonify({"status": "erro", "mensagem": "Token inválido"}), 401
 
     data = request.json
     raw = json.dumps(data) if data else request.get_data(as_text=True)
