@@ -16,9 +16,24 @@ def webhook():
     try:
         conn = get_db()
         cur = conn.cursor()
+        # Extrair campos do JSON do SASI
+        sasi = data.get("data", {}) if data else {}
+        channel = sasi.get("Channel", {}) or {}
+        group = sasi.get("Group", {}) or {}
+        site = sasi.get("Site", {}) or {}
+        location = sasi.get("location", {}) or {}
+        canal = channel.get("name", data.get("canal") if data else None)
+        mensagem = sasi.get("text", data.get("mensagem") if data else None)
+        equipe = group.get("name")
+        site_nome = site.get("name")
+        tipo = data.get("type") if data else None
+        prioridade = sasi.get("priority", 0)
+        lat = location.get("lat")
+        lng = location.get("lng")
         cur.execute(
-            "INSERT INTO registros (canal, mensagem) VALUES (%s, %s)",
-            (data.get("canal") if data else None, data.get("mensagem") if data else None)
+            """INSERT INTO registros (canal, mensagem, equipe, site_nome, tipo, prioridade, lat, lng)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+            (canal, mensagem, equipe, site_nome, tipo, prioridade, lat, lng)
         )
         cur.execute(
             "INSERT INTO webhook_logs (raw_json) VALUES (%s)",
@@ -32,31 +47,53 @@ def webhook():
         with open("fila.txt", "a") as f:
             f.write((raw or json.dumps(data)) + "\n")
         return jsonify({"status": "ok", "destino": "fila", "erro": str(e)}), 200
+
 @app.route("/", methods=["GET"])
 def home():
     try:
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT id, canal, mensagem, data FROM registros ORDER BY data DESC LIMIT 100")
-        registros = cur.fetchall()
         cur.execute("SELECT COUNT(*) FROM registros")
         total = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM registros WHERE data >= NOW() - INTERVAL '24 hours'")
+        hoje = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(DISTINCT canal) FROM registros WHERE canal IS NOT NULL")
+        canais_ativos = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(DISTINCT equipe) FROM registros WHERE equipe IS NOT NULL")
+        equipes_ativas = cur.fetchone()[0]
+        # Alertas por canal (top 10)
+        cur.execute("""SELECT canal, COUNT(*) as total FROM registros
+                       WHERE canal IS NOT NULL GROUP BY canal ORDER BY total DESC LIMIT 10""")
+        por_canal = cur.fetchall()
+        # Alertas por equipe
+        cur.execute("""SELECT equipe, COUNT(*) as total FROM registros
+                       WHERE equipe IS NOT NULL GROUP BY equipe ORDER BY total DESC LIMIT 10""")
+        por_equipe = cur.fetchall()
+        # Alertas por hora (ultimas 24h)
+        cur.execute("""SELECT EXTRACT(HOUR FROM data) as hora, COUNT(*) as total
+                       FROM registros WHERE data >= NOW() - INTERVAL '24 hours'
+                       GROUP BY hora ORDER BY hora""")
+        por_hora = cur.fetchall()
+        # Alertas por dia (ultimos 7 dias)
+        cur.execute("""SELECT data::date as dia, COUNT(*) as total
+                       FROM registros WHERE data >= NOW() - INTERVAL '7 days'
+                       GROUP BY dia ORDER BY dia""")
+        por_dia = cur.fetchall()
         cur.close()
         conn.close()
     except Exception as e:
-        registros = []
-        total = 0
+        total = hoje = canais_ativos = equipes_ativas = 0
+        por_canal = por_equipe = por_hora = por_dia = []
 
-    linhas = ""
-    for r in registros:
-        data_fmt = r[3].strftime("%d/%m/%Y %H:%M") if r[3] else ""
-        linhas += f"""
-            <tr>
-                <td>{r[0]}</td>
-                <td><span class="badge">{r[1] or ''}</span></td>
-                <td>{r[2] or ''}</td>
-                <td>{data_fmt}</td>
-            </tr>"""
+    # Preparar dados para Chart.js
+    canal_labels = json.dumps([r[0] or 'N/A' for r in por_canal])
+    canal_values = json.dumps([r[1] for r in por_canal])
+    equipe_labels = json.dumps([r[0] or 'N/A' for r in por_equipe])
+    equipe_values = json.dumps([r[1] for r in por_equipe])
+    hora_labels = json.dumps([f"{int(r[0])}h" for r in por_hora])
+    hora_values = json.dumps([r[1] for r in por_hora])
+    dia_labels = json.dumps([r[0].strftime("%d/%m") for r in por_dia])
+    dia_values = json.dumps([r[1] for r in por_dia])
 
     html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -64,51 +101,110 @@ def home():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitoramento SASI - IIN</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; padding: 20px; }}
-        .header {{ background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 25px 30px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3); }}
+        .header {{ background: linear-gradient(135deg, #1a73e8, #0d47a1); color: white; padding: 25px 30px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(26,115,232,0.3); display: flex; justify-content: space-between; align-items: center; }}
         .header h1 {{ font-size: 24px; margin-bottom: 5px; }}
         .header p {{ opacity: 0.85; font-size: 14px; }}
-        .stats {{ display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }}
-        .stat-card {{ background: white; padding: 20px 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); flex: 1; min-width: 150px; }}
+        .refresh-btn {{ background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; text-decoration: none; }}
+        .refresh-btn:hover {{ background: rgba(255,255,255,0.3); }}
+        .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }}
+        .stat-card {{ background: white; padding: 20px 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
         .stat-card .number {{ font-size: 32px; font-weight: bold; color: #1a73e8; }}
         .stat-card .label {{ font-size: 13px; color: #666; margin-top: 4px; }}
-        .table-container {{ background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }}
-        .table-header {{ padding: 18px 25px; border-bottom: 1px solid #e8eaed; display: flex; justify-content: space-between; align-items: center; }}
-        .table-header h2 {{ font-size: 18px; color: #333; }}
-        .refresh-btn {{ background: #1a73e8; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; text-decoration: none; }}
-        .refresh-btn:hover {{ background: #1557b0; }}
-        table {{ width: 100%; border-collapse: collapse; }}
-        th {{ background: #f8f9fa; padding: 12px 20px; text-align: left; font-size: 12px; text-transform: uppercase; color: #666; font-weight: 600; letter-spacing: 0.5px; }}
-        td {{ padding: 12px 20px; border-top: 1px solid #f0f0f0; font-size: 14px; }}
-        tr:hover {{ background: #f8f9ff; }}
-        .badge {{ background: #e8f0fe; color: #1a73e8; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }}
-        .empty {{ text-align: center; padding: 50px; color: #999; }}
+        .stat-card.green .number {{ color: #0d9488; }}
+        .stat-card.orange .number {{ color: #ea580c; }}
+        .stat-card.purple .number {{ color: #7c3aed; }}
+        .charts {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-bottom: 20px; }}
+        .chart-card {{ background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
+        .chart-card h3 {{ font-size: 16px; color: #333; margin-bottom: 15px; }}
         .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #999; }}
+        @media (max-width: 768px) {{
+            .charts {{ grid-template-columns: 1fr; }}
+            .stats {{ grid-template-columns: repeat(2, 1fr); }}
+        }}
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Monitoramento SASI</h1>
-        <p>Instituto Insular de Niteroi - Webhook Dashboard</p>
+        <div>
+            <h1>Monitoramento SASI</h1>
+            <p>Instituto Insular de Niteroi - Dashboard em Tempo Real</p>
+        </div>
+        <a href="/" class="refresh-btn">Atualizar</a>
     </div>
     <div class="stats">
         <div class="stat-card">
             <div class="number">{total}</div>
-            <div class="label">Total de Registros</div>
+            <div class="label">Total de Alertas</div>
+        </div>
+        <div class="stat-card green">
+            <div class="number">{hoje}</div>
+            <div class="label">Alertas (24h)</div>
+        </div>
+        <div class="stat-card orange">
+            <div class="number">{canais_ativos}</div>
+            <div class="label">Canais Ativos</div>
+        </div>
+        <div class="stat-card purple">
+            <div class="number">{equipes_ativas}</div>
+            <div class="label">Equipes Ativas</div>
         </div>
     </div>
-    <div class="table-container">
-        <div class="table-header">
-            <h2>Ultimos Registros</h2>
-            <a href="/" class="refresh-btn">Atualizar</a>
+    <div class="charts">
+        <div class="chart-card">
+            <h3>Alertas por Canal</h3>
+            <canvas id="canalChart"></canvas>
         </div>
-        {'<table><thead><tr><th>ID</th><th>Canal</th><th>Mensagem</th><th>Data</th></tr></thead><tbody>' + linhas + '</tbody></table>' if registros else '<div class="empty">Nenhum registro ainda. Aguardando dados do SASI...</div>'}
+        <div class="chart-card">
+            <h3>Atividade por Equipe</h3>
+            <canvas id="equipeChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Alertas por Hora (24h)</h3>
+            <canvas id="horaChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Alertas por Dia (7 dias)</h3>
+            <canvas id="diaChart"></canvas>
+        </div>
     </div>
     <div class="footer">
-        Webhook ativo em /webhook (POST)
+        Webhook ativo em /webhook (POST) | Dados atualizados ao recarregar
     </div>
+    <script>
+        var canalLabels = {canal_labels};
+        var canalValues = {canal_values};
+        var equipeLabels = {equipe_labels};
+        var equipeValues = {equipe_values};
+        var horaLabels = {hora_labels};
+        var horaValues = {hora_values};
+        var diaLabels = {dia_labels};
+        var diaValues = {dia_values};
+        var cores = ['#1a73e8','#ea580c','#0d9488','#7c3aed','#dc2626','#ca8a04','#2563eb','#059669','#d946ef','#64748b'];
+        new Chart(document.getElementById('canalChart'), {{
+            type: 'doughnut',
+            data: {{ labels: canalLabels, datasets: [{{ data: canalValues, backgroundColor: cores }}] }},
+            options: {{ responsive: true, plugins: {{ legend: {{ position: 'right', labels: {{ font: {{ size: 11 }} }} }} }} }}
+        }});
+        new Chart(document.getElementById('equipeChart'), {{
+            type: 'bar',
+            data: {{ labels: equipeLabels, datasets: [{{ label: 'Alertas', data: equipeValues, backgroundColor: '#1a73e8' }}] }},
+            options: {{ responsive: true, indexAxis: 'y', plugins: {{ legend: {{ display: false }} }} }}
+        }});
+        new Chart(document.getElementById('horaChart'), {{
+            type: 'line',
+            data: {{ labels: horaLabels, datasets: [{{ label: 'Alertas', data: horaValues, borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.1)', fill: true, tension: 0.3 }}] }},
+            options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }} }}
+        }});
+        new Chart(document.getElementById('diaChart'), {{
+            type: 'bar',
+            data: {{ labels: diaLabels, datasets: [{{ label: 'Alertas', data: diaValues, backgroundColor: '#7c3aed' }}] }},
+            options: {{ responsive: true, plugins: {{ legend: {{ display: false }} }} }}
+        }});
+    </script>
 </body>
 </html>"""
     return html
