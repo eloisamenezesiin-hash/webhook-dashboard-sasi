@@ -123,6 +123,17 @@ def home():
         .chart-card {{ background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }}
         .chart-card h3 {{ font-size: 16px; color: #333; margin-bottom: 15px; }}
         .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #999; }}
+                .header-actions {{ display: flex; align-items: center; gap: 12px; }}
+                        .dark-toggle {{ background: rgba(255,255,255,0.15); border: none; cursor: pointer; padding: 8px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }}
+                                .dark-toggle:hover {{ background: rgba(255,255,255,0.3); }}
+                                        .dark-toggle svg {{ width: 22px; height: 22px; }}
+                                                body.dark {{ background: #1a1a2e; color: #e0e0e0; }}
+                                                        body.dark .stat-card {{ background: #16213e; border-color: #1a3a5c; }}
+                                                                body.dark .stat-card p {{ color: #aaa; }}
+                                                                        body.dark .chart-card {{ background: #16213e; }}
+                                                                                body.dark .chart-card h3 {{ color: #e0e0e0; }}
+                                                                                        body.dark .header {{ box-shadow: 0 4px 15px rgba(0,0,0,0.5); }}
+                                                                                                body.dark .footer {{ color: #666; }}
         @media (max-width: 768px) {{
             .charts {{ grid-template-columns: 1fr; }}
             .stats {{ grid-template-columns: repeat(2, 1fr); }}
