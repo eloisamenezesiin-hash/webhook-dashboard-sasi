@@ -137,6 +137,11 @@ def home():
         @media (max-width: 768px) {{
             .charts {{ grid-template-columns: 1fr; }}
             .stats {{ grid-template-columns: repeat(2, 1fr); }}
+                        .header {{ flex-wrap: wrap; justify-content: center; gap: 10px; padding: 15px; }}
+                                    .header-left {{ justify-content: center; gap: 10px; }}
+                                                .header-logo img {{ height: 60px; }}
+                                                            .header h1 {{ font-size: 18px; }}
+                                                                        .header-actions {{ width: 100%; justify-content: center; }}
         }}
     </style>
 </head>
