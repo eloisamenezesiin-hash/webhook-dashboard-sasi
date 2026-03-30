@@ -133,7 +133,10 @@ def home():
             <h1>Monitoramento IIN</h1>
             <p>Dashboard em Tempo Real</p>
         </div>
-        <a href="/" class="refresh-btn">Atualizar</a>
+        <div class="header-actions">
+                <button class="dark-toggle" onclick="document.body.classList.toggle('dark'); this.textContent = document.body.classList.contains('dark') ? 'Modo Claro' : 'Modo Escuro';">Modo Escuro</button>
+                <a href="/" class="refresh-btn">Atualizar</a>
+            </div>
     </div>
     <div class="stats">
         <div class="stat-card">
