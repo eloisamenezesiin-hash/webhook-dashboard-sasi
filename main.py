@@ -199,12 +199,12 @@ button:hover{background:#1557b0}</style></head>
         por_equipe = cur.fetchall()
 
         # Alertas por hora (ultimas 24h)
-        cur.execute("""SELECT EXTRACT(HOUR FROM data) as hora, COUNT(*) as total FROM registros
+        cur.execute("""SELECT EXTRACT(HOUR FROM data AT TIME ZONE 'UTC' AT TIME ZONE 'America/Manaus') as hora, COUNT(*) as total FROM registros
                        WHERE data >= NOW() - INTERVAL '24 hours' GROUP BY hora ORDER BY hora""")
         por_hora = cur.fetchall()
 
         # Alertas por dia (ultimos 7 dias)
-        cur.execute("""SELECT data::date as dia, COUNT(*) as total FROM registros
+        cur.execute("""SELECT (data AT TIME ZONE 'UTC' AT TIME ZONE 'America/Manaus')::date as dia, COUNT(*) as total FROM registros
                        WHERE data >= NOW() - INTERVAL '7 days' GROUP BY dia ORDER BY dia""")
         por_dia = cur.fetchall()
 
