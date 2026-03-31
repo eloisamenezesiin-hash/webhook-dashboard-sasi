@@ -43,6 +43,35 @@ def get_db():
     return psycopg2.connect(DATABASE_URL)
 
 
+@app.route("/esqueci-senha", methods=["GET", "POST"])
+def esqueci_senha():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        admin_email = os.environ.get("ADMIN_EMAIL", "eloisamenezes.iin@gmail.com")
+        if email == admin_email and DASHBOARD_PASSWORD:
+            try:
+                import smtplib
+                from email.mime.text import MIMEText
+                smtp_user = os.environ.get("SMTP_USER", "")
+                smtp_pass = os.environ.get("SMTP_PASS", "")
+                if smtp_user and smtp_pass:
+                    msg = MIMEText("Sua senha do Dashboard IIN: " + DASHBOARD_PASSWORD)
+                    msg["Subject"] = "Dashboard IIN - Recuperacao de Senha"
+                    msg["From"] = smtp_user
+                    msg["To"] = admin_email
+                    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
+                        s.login(smtp_user, smtp_pass)
+                        s.send_message(msg)
+            except Exception:
+                pass
+        return """<!DOCTYPE html><html><head><title>Senha Enviada</title>
+<style>*{margin:0;font-family:Arial,sans-serif}body{background:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh}.box{background:white;padding:40px;border-radius:12px;text-align:center;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.2)}h2{color:#1e293b;margin-bottom:12px}p{color:#64748b;margin-bottom:20px}a{color:#2563eb;text-decoration:none}</style></head>
+<body><div class="box"><h2>Email Enviado</h2><p>Se o email informado estiver cadastrado, a senha sera enviada em instantes.</p><a href="/">Voltar ao login</a></div></body></html>"""
+
+    return """<!DOCTYPE html><html><head><title>Esqueci a Senha</title>
+<style>*{margin:0;font-family:Arial,sans-serif}body{background:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh}.box{background:white;padding:40px;border-radius:12px;text-align:center;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.2)}h2{color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:16px}input{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;box-sizing:border-box;margin-bottom:12px}button{width:100%;padding:10px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer}a{color:#2563eb;text-decoration:none;font-size:13px}</style></head>
+<body><div class="box"><h2>Recuperar Senha</h2><p>Digite seu email cadastrado</p><form method="POST"><input name="email" type="email" placeholder="seu@email.com" required><button type="submit">Enviar</button></form><p style="margin-top:16px"><a href="/">Voltar ao login</a></p></div></body></html>"""
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     # Rate limiting
@@ -122,7 +151,7 @@ button{padding:10px 30px;background:#1a73e8;color:white;border:none;border-radiu
 button:hover{background:#1557b0}</style></head>
 <body><div class="box"><h2>Dashboard IIN</h2><p>Digite a senha para acessar</p>
 <form method="GET" action="/"><input type="password" name="senha" placeholder="Senha" required>
-<br><button type="submit">Entrar</button></form></div></body></html>""", 401
+<br><button type="submit" style="width:100%;padding:10px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer;margin-top:8px">Entrar</button></form><p style="margin-top:16px"><a href="/esqueci-senha" style="color:#2563eb;text-decoration:none;font-size:13px">Esqueci minha senha</a></p></div></body></html>""", 401
 
     conn = None
     try:
@@ -237,7 +266,7 @@ button:hover{background:#1557b0}</style></head>
 <body>
     <div class="header">
         <div class="header-left">
-            <div class="header-logo"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NjAgMjIwIj4KICA8ZGVmcz4KICAgIDxwYXRoIGlkPSJ0QSIgZD0iTSAzMCwxMzAgUSAyMzAsNSA0MzAsMTMwIiBmaWxsPSJub25lIi8+CiAgICA8cGF0aCBpZD0iYkEiIGQ9Ik0gMzAsMTY1IFEgMjMwLDI1NSA0MzAsMTY1IiBmaWxsPSJub25lIi8+CiAgPC9kZWZzPgogIDx0ZXh0IGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjE1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuOSkiIGZvbnQtd2VpZ2h0PSJib2xkIiBsZXR0ZXItc3BhY2luZz0iMyI+CiAgICA8dGV4dFBhdGggaHJlZj0iI3RBIiBzdGFydE9mZnNldD0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5USEUgSUlOIEdST1VQIE9GIENPTVBBTklFUzwvdGV4dFBhdGg+CiAgPC90ZXh0PgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDE4Nyw4MikiPgogICAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjciIGhlaWdodD0iNTUiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPgogICAgPHJlY3QgeD0iMjAiIHk9IjAiIHdpZHRoPSI3IiBoZWlnaHQ9IjU1IiByeD0iMiIgZmlsbD0id2hpdGUiLz4KICAgIDxyZWN0IHg9IjQ0IiB5PSIwIiB3aWR0aD0iNyIgaGVpZ2h0PSI1NSIgcng9IjIiIGZpbGw9IndoaXRlIi8+CiAgICA8cmVjdCB4PSI4MCIgeT0iMCIgd2lkdGg9IjciIGhlaWdodD0iNTUiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPgogICAgPHBvbHlnb24gcG9pbnRzPSI0NCwwIDUxLDAgODcsNTUgODAsNTUiIGZpbGw9IndoaXRlIi8+CiAgPC9nPgogIDx0ZXh0IGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjExIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuOCkiIGxldHRlci1zcGFjaW5nPSIyIj4KICAgIDx0ZXh0UGF0aCBocmVmPSIjYkEiIHN0YXJ0T2Zmc2V0PSI1MCUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkNSSUFUSVZJREFERSAmI3gwMEI3OyBRVUFMSURBREUgJiN4MDBCNzsgRklERUxJREFERTwvdGV4dFBhdGg+CiAgPC90ZXh0Pgo8L3N2Zz4K" alt="IIN"></div>
+            <div class="header-logo"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NjAgMjIwIj48ZGVmcz48cGF0aCBpZD0idEEiIGQ9Ik0gNTAsMTE4IFEgMjMwLDE4IDQxMCwxMTgiIGZpbGw9Im5vbmUiLz48cGF0aCBpZD0iYkEiIGQ9Ik0gNzAsMTY4IFEgMjMwLDI0OCAzOTAsMTY4IiBmaWxsPSJub25lIi8+PC9kZWZzPjxwYXRoIGQ9Ik0gMzAsMTMwIFEgMjMwLDQwIDQzMCwxMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIiBzdHJva2Utd2lkdGg9IjEuNSIvPjx0ZXh0IGZvbnQtZmFtaWx5PSJHZW9yZ2lhLHNlcmlmIiBmb250LXNpemU9IjE2IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuOTUpIiBmb250LXdlaWdodD0iYm9sZCIgbGV0dGVyLXNwYWNpbmc9IjMiPjx0ZXh0UGF0aCBocmVmPSIjdEEiIHN0YXJ0T2Zmc2V0PSI1MCUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlRIRSBJSU4gR1JPVVAgT0YgQ09NUEFOSUVTPC90ZXh0UGF0aD48L3RleHQ+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMTc4LDgyKSI+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjgiIGhlaWdodD0iNTgiIHJ4PSIyIiBmaWxsPSJ3aGl0ZSIvPjxyZWN0IHg9IjI0IiB5PSIwIiB3aWR0aD0iOCIgaGVpZ2h0PSI1OCIgcng9IjIiIGZpbGw9IndoaXRlIi8+PHJlY3QgeD0iNTIiIHk9IjAiIHdpZHRoPSI4IiBoZWlnaHQ9IjU4IiByeD0iMiIgZmlsbD0id2hpdGUiLz48cG9seWdvbiBwb2ludHM9IjUyLDAgNjAsMCAxMDAsNTggOTIsNTgiIGZpbGw9IndoaXRlIi8+PHJlY3QgeD0iOTIiIHk9IjAiIHdpZHRoPSI4IiBoZWlnaHQ9IjU4IiByeD0iMiIgZmlsbD0id2hpdGUiLz48L2c+PHRleHQgZm9udC1mYW1pbHk9IkFyaWFsLEhlbHZldGljYSxzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuODUpIiBsZXR0ZXItc3BhY2luZz0iMiI+PHRleHRQYXRoIGhyZWY9IiNiQSIgc3RhcnRPZmZzZXQ9IjUwJSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Q1JJQVRJVklEQURFICYjeDAwQjc7IFFVQUxJREFERSAmI3gwMEI3OyBGSURFTElEQURFPC90ZXh0UGF0aD48L3RleHQ+PC9zdmc+" alt="IIN"></div>
             <div>
                 <h1>Monitoramento IIN</h1>
                 <p>Dashboard em Tempo Real</p>
