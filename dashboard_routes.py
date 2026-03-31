@@ -371,6 +371,20 @@ def api_exportar():
 # ================================================================
 # 9. /api/debug/raw-sample - Ver estrutura do JSON bruto
 # ================================================================
+
+@dashboard_bp.route("/api/migrate/add-comunicante")
+def api_migrate_comunicante():
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+        cur.execute("ALTER TABLE registros ADD COLUMN IF NOT EXISTS comunicante TEXT")
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({"status": "ok", "message": "Coluna comunicante criada/verificada com sucesso"})
+    except Exception as e:
+        return jsonify({"status": "erro", "message": str(e)})
+
 @dashboard_bp.route("/api/debug/raw-sample")
 def api_debug_raw():
     try:
