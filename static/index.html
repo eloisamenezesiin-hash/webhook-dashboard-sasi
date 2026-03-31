@@ -4,27 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard — Monitoramento SASI</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js">
-    // Dark mode toggle
-    function toggleDarkMode() {
-        document.body.classList.toggle('dark-mode');
-        const btn = document.getElementById('darkModeBtn');
-        if (document.body.classList.contains('dark-mode')) {
-            btn.innerHTML = '\u2600\uFE0F';
-            localStorage.setItem('darkMode', 'true');
-        } else {
-            btn.innerHTML = '\uD83C\uDF19';
-            localStorage.setItem('darkMode', 'false');
-        }
-    }
-    // Restore dark mode preference
-    if (localStorage.getItem('darkMode') === 'true') {
-        document.body.classList.add('dark-mode');
-        const btn = document.getElementById('darkModeBtn');
-        if (btn) btn.innerHTML = '\u2600\uFE0F';
-    }
-
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <style>
         /* ========== RESET & BASE ========== */
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,6 +13,81 @@
             background: #f0f2f5;
             color: #1e293b;
             min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* ========== SIDEBAR ========== */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 60px;
+            height: 100vh;
+            background: #1e293b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            z-index: 200;
+            transition: background 0.3s;
+        }
+        .sidebar-logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+        .sidebar-logo svg { width: 22px; height: 22px; }
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+        }
+        .sidebar-btn {
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            position: relative;
+        }
+        .sidebar-btn svg { width: 20px; height: 20px; stroke: #94a3b8; fill: none; stroke-width: 1.8; transition: stroke 0.2s; }
+        .sidebar-btn:hover { background: rgba(255,255,255,0.08); }
+        .sidebar-btn:hover svg { stroke: #fff; }
+        .sidebar-btn.active { background: rgba(37,99,235,0.2); }
+        .sidebar-btn.active svg { stroke: #60a5fa; }
+        .sidebar-btn .tooltip {
+            position: absolute;
+            left: 56px;
+            background: #1e293b;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .sidebar-btn:hover .tooltip { opacity: 1; }
+        .sidebar-bottom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding-bottom: 8px;
         }
 
         /* ========== HEADER ========== */
@@ -47,6 +102,8 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            margin-left: 60px;
+            transition: margin-left 0.3s;
         }
         .header-left {
             display: flex;
@@ -87,6 +144,7 @@
         .filter-bar {
             background: #fff;
             margin: 20px 24px 0;
+            margin-left: 84px;
             padding: 18px 24px;
             border-radius: 12px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.06);
@@ -94,6 +152,7 @@
             align-items: flex-end;
             gap: 16px;
             flex-wrap: wrap;
+            transition: background 0.3s, box-shadow 0.3s, margin-left 0.3s;
         }
         .filter-group {
             display: flex;
@@ -117,7 +176,7 @@
             color: #334155;
             background: #fff;
             cursor: pointer;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, background 0.3s, color 0.3s;
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
@@ -162,6 +221,8 @@
         /* ========== CONTEÚDO PRINCIPAL ========== */
         .main-content {
             padding: 20px 24px;
+            margin-left: 60px;
+            transition: margin-left 0.3s;
         }
 
         /* ========== KPI CARDS ========== */
@@ -177,7 +238,7 @@
             padding: 20px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.06);
             border-left: 4px solid;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
         }
         .kpi-card:hover {
             transform: translateY(-2px);
@@ -226,6 +287,7 @@
             border-radius: 12px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.06);
             overflow: hidden;
+            transition: background 0.3s;
         }
         .chart-card .chart-header {
             padding: 16px 20px 0;
@@ -244,6 +306,7 @@
             border-radius: 12px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.06);
             overflow: hidden;
+            transition: background 0.3s;
         }
         .table-card .table-header {
             padding: 16px 20px;
@@ -293,7 +356,38 @@
             padding: 20px 24px;
             font-size: 0.75rem;
             color: #94a3b8;
+            margin-left: 60px;
         }
+
+        /* ========== DARK MODE ========== */
+        body.dark-mode {
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        body.dark-mode .sidebar { background: #0c1222; }
+        body.dark-mode .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); }
+        body.dark-mode .filter-bar { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark-mode .filter-group label { color: #94a3b8; }
+        body.dark-mode .filter-group select { background: #0f172a; color: #e2e8f0; border-color: #334155; }
+        body.dark-mode .kpi-card { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark-mode .kpi-card .kpi-label { color: #94a3b8; }
+        body.dark-mode .kpi-card .kpi-detail { color: #64748b; }
+        body.dark-mode .chart-card { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark-mode .chart-card .chart-header { color: #e2e8f0; }
+        body.dark-mode .table-card { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark-mode .table-card .table-header { color: #e2e8f0; border-bottom-color: #334155; }
+        body.dark-mode .table-card th { background: #0f172a; color: #94a3b8; border-bottom-color: #334155; }
+        body.dark-mode .table-card td { color: #cbd5e1; border-bottom-color: #1e293b; }
+        body.dark-mode .table-card tbody tr:hover { background: #0f172a; }
+        body.dark-mode .footer { color: #64748b; }
+        body.dark-mode .status-badge.sucesso { background: #14532d; color: #4ade80; }
+        body.dark-mode .status-badge.pendente { background: #422006; color: #fbbf24; }
+        body.dark-mode .status-badge.erro { background: #450a0a; color: #f87171; }
+        body.dark-mode .status-badge.processando { background: #172554; color: #60a5fa; }
+
+        /* Dark mode icon rotation */
+        .dark-mode-icon { transition: transform 0.3s; }
+        body.dark-mode .dark-mode-icon { transform: rotate(180deg); }
 
         /* ========== RESPONSIVO ========== */
         @media (max-width: 900px) {
@@ -305,64 +399,66 @@
         @media (max-width: 600px) {
             .kpi-row { grid-template-columns: 1fr 1fr; }
             .main-content { padding: 12px; }
-            .filter-bar { margin: 12px; padding: 14px; }
+            .filter-bar { margin: 12px; margin-left: 72px; padding: 14px; }
         }
-    
-    /* ── Sidebar ── */
-    .sidebar {
-        position: fixed; left: 0; top: 0; bottom: 0; width: 60px;
-        background: linear-gradient(180deg, #1a3a5c 0%, #0d47a1 100%);
-        display: flex; flex-direction: column; align-items: center;
-        padding: 12px 0; z-index: 100; transition: width 0.2s;
-    }
-    .sidebar a, .sidebar button {
-        width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
-        border-radius: 10px; margin-bottom: 8px; color: rgba(255,255,255,0.7);
-        text-decoration: none; border: none; background: none; cursor: pointer;
-        transition: background 0.2s, color 0.2s; font-size: 20px;
-    }
-    .sidebar a:hover, .sidebar button:hover, .sidebar a.active { background: rgba(255,255,255,0.15); color: #fff; }
-    .sidebar a.active { background: rgba(255,255,255,0.2); }
-    .sidebar .sidebar-logo { margin-bottom: 16px; }
-    .sidebar .sidebar-logo img { width: 36px; height: 36px; border-radius: 8px; }
-    .sidebar .spacer { flex: 1; }
-    /* Push main content right */
-    .header { margin-left: 60px; }
-    .main-content { margin-left: 60px; }
-    /* Dark mode */
-    body.dark-mode { background: #0f172a; color: #e2e8f0; }
-    body.dark-mode .header { background: linear-gradient(135deg, #1e3a5f, #0a2540); }
-    body.dark-mode .card, body.dark-mode .kpi-card { background: #1e293b; border-color: #334155; }
-    body.dark-mode .card-title, body.dark-mode .kpi-card .label { color: #94a3b8; }
-    body.dark-mode table { background: #1e293b; }
-    body.dark-mode th { background: #334155; color: #e2e8f0; }
-    body.dark-mode td { border-color: #334155; color: #cbd5e1; }
-    body.dark-mode tr:hover td { background: #334155; }
-    body.dark-mode .table-header { color: #e2e8f0; }
-    body.dark-mode .filter-bar { background: #1e293b; border-color: #334155; }
-    body.dark-mode select, body.dark-mode input { background: #0f172a; color: #e2e8f0; border-color: #475569; }
-    body.dark-mode .sidebar { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); }
-    .msg-cell { max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    @media (max-width: 768px) {
-        .sidebar { width: 48px; }
-        .header, .main-content { margin-left: 48px; }
-    }
-
     </style>
 </head>
 <body>
 
-    <!-- Sidebar -->
-    <nav class="sidebar">
-        <div class="sidebar-logo"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='8' fill='%231a73e8'/%3E%3Ctext x='50%25' y='55%25' text-anchor='middle' dominant-baseline='middle' fill='white' font-family='Arial' font-size='16' font-weight='bold'%3EIIN%3C/text%3E%3C/svg%3E" alt="IIN"></div>
-        <a href="/painel" class="active" title="Dashboard">&#x1f4ca;</a>
-        <a href="/painel" title="Registros">&#x1f4cb;</a>
-        <a href="/painel" title="Exportar" onclick="exportarRelatorio(); return false;">&#x1f4e5;</a>
-        <div class="spacer"></div>
-        <button onclick="toggleDarkMode()" title="Modo Noturno" id="darkModeBtn">&#x1f319;</button>
-        <a href="/" title="Sair">&#x1f6aa;</a>
-    </nav>
-
+<!-- ==================== SIDEBAR ==================== -->
+<nav class="sidebar">
+    <div class="sidebar-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+    </div>
+    <div class="sidebar-nav">
+        <button class="sidebar-btn active" onclick="scrollToSection('kpi-row')" title="Dashboard">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            <span class="tooltip">Dashboard</span>
+        </button>
+        <button class="sidebar-btn" onclick="scrollToSection('tabela-section')" title="Registros">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <span class="tooltip">Registros</span>
+        </button>
+        <button class="sidebar-btn" onclick="scrollToSection('charts-section')" title="Gráficos">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <span class="tooltip">Gráficos</span>
+        </button>
+        <button class="sidebar-btn" onclick="exportarRelatorio()" title="Exportar">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span class="tooltip">Exportar</span>
+        </button>
+    </div>
+    <div class="sidebar-bottom">
+        <button class="sidebar-btn" onclick="toggleDarkMode()" title="Modo Escuro" id="btn-dark">
+            <svg class="dark-mode-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" id="icon-dark">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            <span class="tooltip" id="tooltip-dark">Modo Escuro</span>
+        </button>
+    </div>
+</nav>
 
 <!-- ==================== HEADER ==================== -->
 <header class="header">
@@ -470,8 +566,8 @@
         </div>
     </div>
 
-    <!-- GRÁFICOS LINHA 1: Rosca + Equipe + Horas (3 colunas como o original) -->
-    <div class="charts-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+    <!-- GRÁFICOS LINHA 1: Rosca + Equipe + Horas (3 colunas) -->
+    <div class="charts-grid" id="charts-section" style="grid-template-columns: 1fr 1fr 1fr;">
         <div class="chart-card">
             <div class="chart-header">Alertas por Canal</div>
             <div class="chart-body">
@@ -502,20 +598,20 @@
         </div>
     </div>
 
-    <!-- TABELA DE EVENTOS RECENTES -->
-    <div class="table-card">
+    <!-- TABELA DE REGISTROS -->
+    <div class="table-card" id="tabela-section">
         <div class="table-header">Registros</div>
         <table>
             <thead>
                 <tr>
-                            <th>Status</th>
-                            <th>Criado</th>
-                            <th>Canal</th>
-                            <th>Equipe</th>
-                            <th>Site</th>
-                            <th>Comunicante</th>
-                            <th>Mensagem</th>
-                        </tr>
+                    <th>Status</th>
+                    <th>Criado</th>
+                    <th>Canal</th>
+                    <th>Equipe</th>
+                    <th>Site</th>
+                    <th>Comunicante</th>
+                    <th>Mensagem</th>
+                </tr>
             </thead>
             <tbody id="tabela-eventos"></tbody>
         </table>
@@ -531,11 +627,7 @@
 <script>
 // ==============================================================
 // CONFIGURAÇÃO: URL base da API
-// Quando o backend estiver rodando, troque para o endereço real.
-// Enquanto for "", o dashboard usa dados simulados (fallback).
 // ==============================================================
-// Quando servido pelo FastAPI, usa URL relativa (mesmo servidor).
-// Quando aberto como arquivo local, usa a URL completa do Render.
 const API_BASE = window.location.protocol === "file:"
     ? "https://webhook-dashboard-sasi.onrender.com"
     : window.location.origin;
@@ -571,21 +663,21 @@ const DADOS_SIMULADOS = {
     eventosPorDia: [1350, 1280, 1420, 1380, 1300, 850, 533],
     stats: { total_alertas: 8113, alertas_24h: 8112, canais_ativos: 47, equipes_ativas: 7, erros_24h: 0, tempo_medio_ms: 28 },
     eventosRecentes: [
-        { data: "30/03/2026 22:15:33", canal: "CHEGADA NO LOCAL",   evento: "alerta_recebido",  equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Carlos Mendes",   status: "sucesso" },
-        { data: "30/03/2026 22:14:58", canal: "RONDA PERIÓDICA",    evento: "ronda_concluida",   equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Silva Neto",      status: "sucesso" },
-        { data: "30/03/2026 22:13:22", canal: "SAÍDA DO LOCAL",     evento: "saida_registrada",  equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. João Santos",     status: "sucesso" },
-        { data: "30/03/2026 22:12:45", canal: "RESPALDO",           evento: "respaldo_enviado",  equipe: "Fiscalização",         usuario: "Fiscal Ana Lima",     status: "sucesso" },
-        { data: "30/03/2026 22:11:10", canal: "CHECKLIST VEÍCULO",  evento: "checklist_ok",      equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Pedro Rocha",     status: "sucesso" },
-        { data: "30/03/2026 22:10:30", canal: "CHEGADA NO LOCAL",   evento: "alerta_recebido",   equipe: "Manutenção - Técnicos",usuario: "Téc. Bruno Costa",    status: "sucesso" },
-        { data: "30/03/2026 22:09:55", canal: "Visita",             evento: "visita_registrada", equipe: "Terceirizados - Gestão",usuario: "Gest. Camila Reis",  status: "pendente" },
-        { data: "30/03/2026 22:08:18", canal: "INTERVALO",          evento: "intervalo_inicio",  equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Marcos Dias",     status: "sucesso" },
-        { data: "30/03/2026 22:07:42", canal: "RONDA PERIÓDICA",    evento: "ronda_concluida",   equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Thiago Alves",    status: "sucesso" },
-        { data: "30/03/2026 22:06:15", canal: "SAÍDA DO LOCAL",     evento: "saida_registrada",  equipe: "Manutenção - Superv. Tec.", usuario: "Sup. Roberto Melo", status: "sucesso" },
-        { data: "30/03/2026 22:05:30", canal: "OFICINA",            evento: "os_aberta",         equipe: "Manutenção - Técnicos",usuario: "Téc. Lucas Souza",    status: "sucesso" },
-        { data: "30/03/2026 22:04:50", canal: "Checklist de Chaves",evento: "chaves_conferidas", equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Fernanda Nunes",  status: "sucesso" },
-        { data: "30/03/2026 22:03:22", canal: "CHEGADA NO LOCAL",   evento: "alerta_recebido",   equipe: "Almoxarifado - AM",    usuario: "Almox. Diego Barros", status: "sucesso" },
-        { data: "30/03/2026 22:02:10", canal: "DISPENSADO - CENTRAL",evento: "dispensa_registrada",equipe: "EQUIPE DE RESPOSTA", usuario: "Op. Juliana Rocha",   status: "sucesso" },
-        { data: "30/03/2026 22:01:05", canal: "RONDA PERIÓDICA",    evento: "ronda_concluida",   equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Patrícia Melo",   status: "sucesso" }
+        { data: "30/03/2026 22:15:33", canal: "CHEGADA NO LOCAL",   evento: "alerta_recebido",  equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Carlos Mendes",   comunicante: "Carlos Mendes", status: "sucesso" },
+        { data: "30/03/2026 22:14:58", canal: "RONDA PERIÓDICA",    evento: "ronda_concluida",   equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Silva Neto",      comunicante: "Silva Neto", status: "sucesso" },
+        { data: "30/03/2026 22:13:22", canal: "SAÍDA DO LOCAL",     evento: "saida_registrada",  equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. João Santos",     comunicante: "João Santos", status: "sucesso" },
+        { data: "30/03/2026 22:12:45", canal: "RESPALDO",           evento: "respaldo_enviado",  equipe: "Fiscalização",         usuario: "Fiscal Ana Lima",     comunicante: "Ana Lima", status: "sucesso" },
+        { data: "30/03/2026 22:11:10", canal: "CHECKLIST VEÍCULO",  evento: "checklist_ok",      equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Pedro Rocha",     comunicante: "Pedro Rocha", status: "sucesso" },
+        { data: "30/03/2026 22:10:30", canal: "CHEGADA NO LOCAL",   evento: "alerta_recebido",   equipe: "Manutenção - Técnicos",usuario: "Téc. Bruno Costa",    comunicante: "Bruno Costa", status: "sucesso" },
+        { data: "30/03/2026 22:09:55", canal: "Visita",             evento: "visita_registrada", equipe: "Terceirizados - Gestão",usuario: "Gest. Camila Reis",  comunicante: "Camila Reis", status: "pendente" },
+        { data: "30/03/2026 22:08:18", canal: "INTERVALO",          evento: "intervalo_inicio",  equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Marcos Dias",     comunicante: "Marcos Dias", status: "sucesso" },
+        { data: "30/03/2026 22:07:42", canal: "RONDA PERIÓDICA",    evento: "ronda_concluida",   equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Thiago Alves",    comunicante: "Thiago Alves", status: "sucesso" },
+        { data: "30/03/2026 22:06:15", canal: "SAÍDA DO LOCAL",     evento: "saida_registrada",  equipe: "Manutenção - Superv. Tec.", usuario: "Sup. Roberto Melo", comunicante: "Roberto Melo", status: "sucesso" },
+        { data: "30/03/2026 22:05:30", canal: "OFICINA",            evento: "os_aberta",         equipe: "Manutenção - Técnicos",usuario: "Téc. Lucas Souza",    comunicante: "Lucas Souza", status: "sucesso" },
+        { data: "30/03/2026 22:04:50", canal: "Checklist de Chaves",evento: "chaves_conferidas", equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Fernanda Nunes",  comunicante: "Fernanda Nunes", status: "sucesso" },
+        { data: "30/03/2026 22:03:22", canal: "CHEGADA NO LOCAL",   evento: "alerta_recebido",   equipe: "Almoxarifado - AM",    usuario: "Almox. Diego Barros", comunicante: "Diego Barros", status: "sucesso" },
+        { data: "30/03/2026 22:02:10", canal: "DISPENSADO - CENTRAL",evento: "dispensa_registrada",equipe: "EQUIPE DE RESPOSTA", usuario: "Op. Juliana Rocha",   comunicante: "Juliana Rocha", status: "sucesso" },
+        { data: "30/03/2026 22:01:05", canal: "RONDA PERIÓDICA",    evento: "ronda_concluida",   equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Patrícia Melo",   comunicante: "Patrícia Melo", status: "sucesso" }
     ]
 };
 
@@ -593,8 +685,56 @@ const DADOS_SIMULADOS = {
 // VARIÁVEIS GLOBAIS
 // ==============================================================
 let chartRosca, chartBarras, chartLinha, chartEquipe;
-let modoAPI = false;  // true = conectado à API real, false = dados simulados
+let modoAPI = false;
 let refreshInterval = null;
+
+// ==============================================================
+// DARK MODE
+// ==============================================================
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    const iconEl = document.getElementById('icon-dark');
+    const tooltipEl = document.getElementById('tooltip-dark');
+
+    if (isDark) {
+        // Sun icon
+        iconEl.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        tooltipEl.textContent = 'Modo Claro';
+    } else {
+        // Moon icon
+        iconEl.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+        tooltipEl.textContent = 'Modo Escuro';
+    }
+
+    // Update chart colors for dark mode
+    if (chartRosca || chartBarras || chartLinha || chartEquipe) {
+        atualizarTudo();
+    }
+
+    try { localStorage.setItem('darkMode', isDark ? '1' : '0'); } catch(e) {}
+}
+
+// Restore dark mode preference
+try {
+    if (localStorage.getItem('darkMode') === '1') {
+        document.body.classList.add('dark-mode');
+        // Will update icon after DOM loads
+    }
+} catch(e) {}
+
+// ==============================================================
+// SIDEBAR NAVIGATION
+// ==============================================================
+function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Update active state
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+    }
+}
 
 // ==============================================================
 // CAMADA DE COMUNICAÇÃO COM A API
@@ -638,6 +778,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     atualizarRelogio();
     setInterval(atualizarRelogio, 1000);
 
+    // Restore dark mode icon if needed
+    if (document.body.classList.contains('dark-mode')) {
+        const iconEl = document.getElementById('icon-dark');
+        const tooltipEl = document.getElementById('tooltip-dark');
+        if (iconEl) {
+            iconEl.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        }
+        if (tooltipEl) tooltipEl.textContent = 'Modo Claro';
+    }
+
     // Tentar conectar à API real
     if (API_BASE) {
         const teste = await apiFetch("stats");
@@ -645,7 +795,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             modoAPI = true;
             console.log("[Dashboard] Conectado à API real:", API_BASE);
             document.getElementById("header-status").textContent = "Online — Conectado à API";
-            // Carregar opções de filtros dinâmicas
             await carregarFiltrosDinamicos();
         }
     }
@@ -655,10 +804,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("header-status").textContent = "Modo Demo — Dados simulados";
     }
 
-    // Carregar dados iniciais
     await atualizarTudo();
 
-    // Auto-refresh a cada 30 segundos (só em modo API)
     if (modoAPI) {
         refreshInterval = setInterval(atualizarTudo, 30000);
     }
@@ -671,7 +818,6 @@ async function carregarFiltrosDinamicos() {
     const data = await apiFetch("filtros");
     if (!data) return;
 
-    // Popular dropdown de Canal
     if (data.canais && data.canais.length) {
         const sel = document.getElementById("filter-canal");
         sel.innerHTML = '<option value="">Todos os Canais</option>';
@@ -680,7 +826,6 @@ async function carregarFiltrosDinamicos() {
         });
     }
 
-    // Popular dropdown de Equipe
     if (data.equipes && data.equipes.length) {
         const sel = document.getElementById("filter-equipe");
         sel.innerHTML = '<option value="">Todas as Equipes</option>';
@@ -697,7 +842,6 @@ async function atualizarTudo() {
     const filtros = getFiltros();
 
     if (modoAPI) {
-        // Buscar tudo da API em paralelo
         const [stats, canais, equipes, porDia, porHora, eventos] = await Promise.all([
             apiFetch("stats", filtros),
             apiFetch("por-canal", { equipe: filtros.equipe, dias: 30 }),
@@ -707,7 +851,6 @@ async function atualizarTudo() {
             apiFetch("eventos-recentes", filtros),
         ]);
 
-        // KPIs
         if (stats) {
             animarKPI("kpi-total",   stats.total_eventos || stats.total_alertas || 0, true);
             animarKPI("kpi-hoje",    stats.eventos_hoje || stats.alertas_24h || 0, true);
@@ -717,37 +860,31 @@ async function atualizarTudo() {
             document.getElementById("kpi-tempo").innerHTML = `${stats.tempo_medio_ms}<span style="font-size:1rem;font-weight:600;">ms</span>`;
         }
 
-        // Gráfico de rosca
         if (canais && canais.canais) {
             criarGraficoRosca(canais.canais);
         }
 
-        // Gráfico de equipes
         if (equipes && equipes.equipes) {
             criarGraficoEquipe(equipes.equipes);
         }
 
-        // Gráfico de barras (por dia)
         if (porDia && porDia.dados && porDia.dados.length) {
             const labels = porDia.dados.map(d => d.dia_formatado);
             const valores = porDia.dados.map(d => d.total);
             criarGraficoBarras(labels, valores);
         }
 
-        // Gráfico de linha (por hora)
         if (porHora && porHora.dados && porHora.dados.length) {
             const labels = porHora.dados.map(d => d.hora);
             const valores = porHora.dados.map(d => d.total);
             criarGraficoLinha(labels, valores);
         }
 
-        // Tabela
         if (eventos && eventos.eventos) {
             renderizarTabela(eventos.eventos);
         }
 
     } else {
-        // MODO SIMULADO: filtragem local
         atualizarComDadosSimulados(filtros);
     }
 }
@@ -758,7 +895,6 @@ async function atualizarTudo() {
 function atualizarComDadosSimulados(filtros) {
     const DS = DADOS_SIMULADOS;
 
-    // Filtrar tabela localmente
     let eventosFiltrados = DS.eventosRecentes.filter(e => {
         if (filtros.canal  && e.canal  !== filtros.canal)  return false;
         if (filtros.status && e.status !== filtros.status) return false;
@@ -767,7 +903,6 @@ function atualizarComDadosSimulados(filtros) {
     });
     renderizarTabela(eventosFiltrados);
 
-    // Fator proporcional para simular filtragem nos KPIs e gráficos
     const fator = eventosFiltrados.length / DS.eventosRecentes.length;
 
     animarKPI("kpi-total",   Math.round(DS.stats.total_alertas * fator), true);
@@ -776,7 +911,6 @@ function atualizarComDadosSimulados(filtros) {
     animarKPI("kpi-equipes", Math.round(DS.stats.equipes_ativas * fator), false);
     animarKPI("kpi-erros",   eventosFiltrados.filter(e => e.status === "erro").length || Math.round(DS.stats.erros_24h * fator), false);
 
-    // Rosca
     if (filtros.canal) {
         const d = {}; d[filtros.canal] = DS.canais[filtros.canal] || { total: 0, cor: "#64748b" };
         criarGraficoRosca(d);
@@ -784,7 +918,6 @@ function atualizarComDadosSimulados(filtros) {
         criarGraficoRosca(DS.canais);
     }
 
-    // Equipes
     if (filtros.equipe) {
         const d = {}; d[filtros.equipe] = DS.equipes[filtros.equipe] || 0;
         criarGraficoEquipe(d);
@@ -792,19 +925,29 @@ function atualizarComDadosSimulados(filtros) {
         criarGraficoEquipe(DS.equipes);
     }
 
-    // Barras e linha com fator
     criarGraficoBarras(DS.diasSemana, DS.eventosPorDia.map(v => Math.round(v * fator)));
     criarGraficoLinha(DS.horasHoje, DS.eventosPorHora.map(v => Math.round(v * fator)));
 }
 
 // ==============================================================
-// GRÁFICOS (funções de criação — iguais para ambos os modos)
+// GRÁFICOS
 // ==============================================================
+function getChartColors() {
+    const isDark = document.body.classList.contains('dark-mode');
+    return {
+        gridColor: isDark ? '#334155' : '#f1f5f9',
+        tickColor: isDark ? '#94a3b8' : '#64748b',
+        tickColorLight: isDark ? '#64748b' : '#94a3b8',
+        legendColor: isDark ? '#e2e8f0' : '#1e293b',
+    };
+}
+
 function criarGraficoRosca(canaisData) {
     const ctx = document.getElementById("chart-rosca").getContext("2d");
     const labels = Object.keys(canaisData);
     const valores = labels.map(k => canaisData[k].total);
     const cores = labels.map(k => canaisData[k].cor || "#64748b");
+    const colors = getChartColors();
 
     if (chartRosca) chartRosca.destroy();
     chartRosca = new Chart(ctx, {
@@ -815,7 +958,7 @@ function criarGraficoRosca(canaisData) {
                 data: valores,
                 backgroundColor: cores,
                 borderWidth: 2,
-                borderColor: "#fff",
+                borderColor: document.body.classList.contains('dark-mode') ? '#1e293b' : '#fff',
                 hoverOffset: 6
             }]
         },
@@ -824,7 +967,7 @@ function criarGraficoRosca(canaisData) {
             maintainAspectRatio: false,
             cutout: "60%",
             plugins: {
-                legend: { position: "right", labels: { padding: 14, usePointStyle: true, pointStyle: "circle" } },
+                legend: { position: "right", labels: { padding: 14, usePointStyle: true, pointStyle: "circle", color: colors.legendColor } },
                 tooltip: {
                     callbacks: {
                         label: ctx => {
@@ -841,6 +984,7 @@ function criarGraficoRosca(canaisData) {
 
 function criarGraficoBarras(labels, data) {
     const ctx = document.getElementById("chart-barras").getContext("2d");
+    const colors = getChartColors();
     if (chartBarras) chartBarras.destroy();
     chartBarras = new Chart(ctx, {
         type: "bar",
@@ -861,8 +1005,8 @@ function criarGraficoBarras(labels, data) {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                y: { beginAtZero: true, grid: { color: "#f1f5f9" }, ticks: { color: "#94a3b8" } },
-                x: { grid: { display: false }, ticks: { color: "#64748b" } }
+                y: { beginAtZero: true, grid: { color: colors.gridColor }, ticks: { color: colors.tickColorLight } },
+                x: { grid: { display: false }, ticks: { color: colors.tickColor } }
             }
         }
     });
@@ -870,6 +1014,7 @@ function criarGraficoBarras(labels, data) {
 
 function criarGraficoLinha(labels, data) {
     const ctx = document.getElementById("chart-linha").getContext("2d");
+    const colors = getChartColors();
     if (chartLinha) chartLinha.destroy();
     chartLinha = new Chart(ctx, {
         type: "line",
@@ -892,8 +1037,8 @@ function criarGraficoLinha(labels, data) {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                y: { beginAtZero: true, grid: { color: "#f1f5f9" }, ticks: { color: "#94a3b8" } },
-                x: { grid: { display: false }, ticks: { color: "#64748b", maxTicksLimit: 12 } }
+                y: { beginAtZero: true, grid: { color: colors.gridColor }, ticks: { color: colors.tickColorLight } },
+                x: { grid: { display: false }, ticks: { color: colors.tickColor, maxTicksLimit: 12 } }
             }
         }
     });
@@ -904,6 +1049,7 @@ function criarGraficoEquipe(equipesData) {
     const labels = Object.keys(equipesData);
     const data = Object.values(equipesData);
     const cores = ["#2563eb", "#7c3aed", "#0891b2", "#d97706", "#16a34a"];
+    const colors = getChartColors();
 
     if (chartEquipe) chartEquipe.destroy();
     chartEquipe = new Chart(ctx, {
@@ -926,51 +1072,36 @@ function criarGraficoEquipe(equipesData) {
             indexAxis: "y",
             plugins: { legend: { display: false } },
             scales: {
-                x: { beginAtZero: true, grid: { color: "#f1f5f9" }, ticks: { color: "#94a3b8" } },
-                y: { grid: { display: false }, ticks: { color: "#64748b" } }
+                x: { beginAtZero: true, grid: { color: colors.gridColor }, ticks: { color: colors.tickColorLight } },
+                y: { grid: { display: false }, ticks: { color: colors.tickColor } }
             }
         }
     });
 }
 
 // ==============================================================
-// TABELA
+// TABELA (colunas: Status, Criado, Canal, Equipe, Site, Comunicante, Mensagem)
 // ==============================================================
 function renderizarTabela(eventos) {
-        const tbody = document.querySelector('#tabela-eventos tbody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-        if (!eventos || eventos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#999">Nenhum evento encontrado</td></tr>';
-            return;
-        }
-        eventos.forEach(e => {
-            const statusClass = e.status === 'sucesso' ? 'status-sucesso' : e.status === 'erro' ? 'status-erro' : 'status-pendente';
-            const statusLabel = e.status || 'N/A';
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
-                <td>${e.data || ''}</td>
-                <td>${e.canal || ''}</td>
-                <td>${e.equipe || ''}</td>
-                <td>${e.usuario || ''}</td>
-                <td>${e.comunicante || ''}</td>
-                <td class="msg-cell">${e.evento || ''}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+    const tbody = document.getElementById("tabela-eventos");
+    if (!eventos || !eventos.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px;">Nenhum registro encontrado para os filtros selecionados.</td></tr>';
+        return;
     }
-    tbody.innerHTML = eventos.map(e => `
+    tbody.innerHTML = eventos.map(e => {
+        const statusText = e.status ? e.status.charAt(0).toUpperCase() + e.status.slice(1) : '—';
+        const statusClass = e.status || '';
+        return `
         <tr>
-            <td>${e.data}</td>
-            <td>${e.canal}</td>
-            <td>${e.evento}</td>
-            <td>${e.equipe}</td>
-            <td>${e.usuario}</td>
-            <td>${e.comunicante || ""}</td>
-            <td><span class="status-badge ${e.status}">${e.status.charAt(0).toUpperCase() + e.status.slice(1)}</span></td>
-        </tr>
-    `).join("");
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            <td>${e.data || '—'}</td>
+            <td>${e.canal || '—'}</td>
+            <td>${e.equipe || '—'}</td>
+            <td>${e.usuario || '—'}</td>
+            <td>${e.comunicante || e.usuario || '—'}</td>
+            <td>${e.evento || '—'}</td>
+        </tr>`;
+    }).join("");
 }
 
 // ==============================================================
@@ -1017,7 +1148,6 @@ async function aplicarFiltros() {
 
     await atualizarTudo();
 
-    // Feedback visual
     btn.textContent = "Aplicado!";
     btn.style.background = "#16a34a";
     setTimeout(() => {
@@ -1034,14 +1164,12 @@ async function exportarRelatorio() {
     const btn = document.getElementById("btn-exportar");
 
     if (modoAPI) {
-        // Modo API: redireciona para o endpoint de exportação CSV
         const url = new URL(`${API_BASE}/api/dashboard/exportar`);
         if (filtros.canal)  url.searchParams.set("canal", filtros.canal);
         if (filtros.status) url.searchParams.set("status", filtros.status);
         if (filtros.equipe) url.searchParams.set("equipe", filtros.equipe);
         window.open(url.toString(), "_blank");
     } else {
-        // Modo simulado: gera CSV localmente
         let dados = DADOS_SIMULADOS.eventosRecentes.filter(e => {
             if (filtros.canal  && e.canal  !== filtros.canal)  return false;
             if (filtros.status && e.status !== filtros.status) return false;
@@ -1049,9 +1177,9 @@ async function exportarRelatorio() {
             return true;
         });
 
-        const header = "Data/Hora;Canal;Evento;Equipe;Usuário;Comunicante;Status\n";
+        const header = "Status;Criado;Canal;Equipe;Site;Comunicante;Mensagem\n";
         const linhas = dados.map(e =>
-            `${e.data};${e.canal};${e.evento};${e.equipe};${e.usuario};${e.comunicante || ""};${e.status}`
+            `${e.status};${e.data};${e.canal};${e.equipe};${e.usuario};${e.comunicante || e.usuario};${e.evento}`
         ).join("\n");
 
         const blob = new Blob(["\uFEFF" + header + linhas], { type: "text/csv;charset=utf-8;" });
@@ -1063,7 +1191,6 @@ async function exportarRelatorio() {
         URL.revokeObjectURL(url);
     }
 
-    // Feedback visual
     btn.textContent = "Exportado!";
     setTimeout(() => {
         btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar Relatório';
