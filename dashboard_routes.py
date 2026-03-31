@@ -191,7 +191,7 @@ def api_por_hora():
             params.append(equipe)
         w = " WHERE " + " AND ".join(where)
         cur.execute(
-            "SELECT EXTRACT(HOUR FROM data AT TIME ZONE 'UTC' AT TIME ZONE 'America/Manaus') as hora, COUNT(*) as total "
+            "SELECT EXTRACT(HOUR FROM data) as hora, COUNT(*) as total "
             "FROM registros" + w +
             " GROUP BY hora ORDER BY hora",
             params
@@ -227,7 +227,7 @@ def api_por_dia():
             params.append(equipe)
         w = " WHERE " + " AND ".join(where)
         cur.execute(
-            "SELECT (data AT TIME ZONE 'UTC' AT TIME ZONE 'America/Manaus')::date as dia, COUNT(*) as total "
+            "SELECT data::date as dia, COUNT(*) as total "
             "FROM registros" + w +
             " GROUP BY dia ORDER BY dia",
             params
@@ -267,7 +267,7 @@ def api_eventos_recentes():
         w = (" WHERE " + " AND ".join(where)) if where else ""
         params.append(int(limite))
         cur.execute(
-            "SELECT data AT TIME ZONE 'UTC' AT TIME ZONE 'America/Manaus' as data, canal, tipo, equipe, site_nome, mensagem, comunicante "
+            "SELECT data, canal, tipo, equipe, site_nome, mensagem "
             "FROM registros" + w +
             " ORDER BY data DESC LIMIT %s",
             params
@@ -277,14 +277,14 @@ def api_eventos_recentes():
         conn.close()
 
         eventos = []
-        for data, cn, tipo, eq, site, msg, comunicante in rows:
+        for data, cn, tipo, eq, site, msg in rows:
             eventos.append({
                 "data": data.strftime("%d/%m/%Y %H:%M:%S") if data else "",
                 "canal": cn or "",
-                "evento": tipo or msg or "",
+                "evento": tipo or "",
+                "mensagem": msg or "",
                 "equipe": eq or "",
                 "usuario": site or "",
-                "comunicante": comunicante or "",
                 "status": "sucesso",
             })
         return jsonify({"eventos": eventos, "total": len(eventos)})
@@ -337,7 +337,7 @@ def api_exportar():
             params.append(equipe)
         w = (" WHERE " + " AND ".join(where)) if where else ""
         cur.execute(
-            "SELECT data AT TIME ZONE 'UTC' AT TIME ZONE 'America/Manaus' as data, canal, tipo, equipe, site_nome, mensagem, comunicante "
+            "SELECT data, canal, tipo, equipe, site_nome, mensagem "
             "FROM registros" + w +
             " ORDER BY data DESC LIMIT 5000",
             params
@@ -349,11 +349,11 @@ def api_exportar():
         output = io.StringIO()
         output.write("\ufeff")
         writer = csv.writer(output, delimiter=";")
-        writer.writerow(["Data/Hora", "Canal", "Tipo", "Equipe", "Site", "Mensagem", "Comunicante"])
-        for data, cn, tipo, eq, site, msg, comunicante in rows:
+        writer.writerow(["Data/Hora", "Canal", "Tipo", "Equipe", "Site", "Mensagem"])
+        for data, cn, tipo, eq, site, msg in rows:
             writer.writerow([
                 data.strftime("%d/%m/%Y %H:%M:%S") if data else "",
-                cn or "", tipo or "", eq or "", site or "", msg or "", comunicante or "",
+                cn or "", tipo or "", eq or "", site or "", msg or "",
             ])
         output.seek(0)
 
@@ -369,29 +369,16 @@ def api_exportar():
 
 
 # ================================================================
-# 9. /api/debug/raw-sample - Ver estrutura do JSON bruto
+# 9. /api/debug/raw-sample - Ver estrutura do JSON bruto (temporario)
 # ================================================================
-
-@dashboard_bp.route("/api/migrate/add-comunicante")
-def api_migrate_comunicante():
-    try:
-        conn = _get_conn()
-        cur = conn.cursor()
-        cur.execute("ALTER TABLE registros ADD COLUMN IF NOT EXISTS comunicante TEXT")
-        conn.commit()
-        cur.close()
-        conn.close()
-        return jsonify({"status": "ok", "message": "Coluna comunicante criada/verificada com sucesso"})
-    except Exception as e:
-        return jsonify({"status": "erro", "message": str(e)})
-
 @dashboard_bp.route("/api/debug/raw-sample")
 def api_debug_raw():
+    """Retorna amostras do raw_json da tabela webhook_logs para análise."""
     try:
         conn = _get_conn()
         cur = conn.cursor()
         cur.execute(
-                        "SELECT id, raw_json FROM webhook_logs "
+            "SELECT id, raw_json, created_at FROM webhook_logs "
             "ORDER BY id DESC LIMIT 3"
         )
         rows = cur.fetchall()
@@ -399,13 +386,14 @@ def api_debug_raw():
         conn.close()
 
         samples = []
-        for row_id, raw in rows:
+        for row_id, raw, created in rows:
             try:
                 parsed = json.loads(raw) if isinstance(raw, str) else raw
             except Exception:
                 parsed = {"_raw_text": str(raw)[:500]}
             samples.append({
                 "id": row_id,
+                "created_at": str(created) if created else "",
                 "keys_nivel_1": list(parsed.keys()) if isinstance(parsed, dict) else [],
                 "keys_data": list(parsed.get("data", {}).keys()) if isinstance(parsed, dict) and isinstance(parsed.get("data"), dict) else [],
                 "raw_json": parsed,
