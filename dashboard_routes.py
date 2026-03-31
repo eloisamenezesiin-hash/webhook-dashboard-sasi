@@ -7,7 +7,7 @@ Usa psycopg2 (mesmo driver do main.py) para consultar Supabase.
 import os
 import csv
 import io
-import jsonh
+import json
 from flask import Blueprint, jsonify, request, Response, send_from_directory
 
 import psycopg2
@@ -384,7 +384,7 @@ def api_debug_raw():
         conn.close()
 
         samples = []
-                for row_id, raw in rows:
+        for row_id, raw in rows:
             try:
                 parsed = json.loads(raw) if isinstance(raw, str) else raw
             except Exception:
