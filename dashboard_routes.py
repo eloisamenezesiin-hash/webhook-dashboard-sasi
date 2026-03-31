@@ -267,7 +267,7 @@ def api_eventos_recentes():
         w = (" WHERE " + " AND ".join(where)) if where else ""
         params.append(int(limite))
         cur.execute(
-            "SELECT data, canal, tipo, equipe, site_nome, mensagem "
+            "SELECT data, canal, tipo, equipe, site_nome, mensagem, comunicante "
             "FROM registros" + w +
             " ORDER BY data DESC LIMIT %s",
             params
@@ -277,13 +277,14 @@ def api_eventos_recentes():
         conn.close()
 
         eventos = []
-        for data, cn, tipo, eq, site, msg in rows:
+        for data, cn, tipo, eq, site, msg, comunicante in rows:
             eventos.append({
                 "data": data.strftime("%d/%m/%Y %H:%M:%S") if data else "",
                 "canal": cn or "",
                 "evento": tipo or msg or "",
                 "equipe": eq or "",
                 "usuario": site or "",
+                "comunicante": comunicante or "",
                 "status": "sucesso",
             })
         return jsonify({"eventos": eventos, "total": len(eventos)})
@@ -336,7 +337,7 @@ def api_exportar():
             params.append(equipe)
         w = (" WHERE " + " AND ".join(where)) if where else ""
         cur.execute(
-            "SELECT data, canal, tipo, equipe, site_nome, mensagem "
+            "SELECT data, canal, tipo, equipe, site_nome, mensagem, comunicante "
             "FROM registros" + w +
             " ORDER BY data DESC LIMIT 5000",
             params
@@ -348,11 +349,11 @@ def api_exportar():
         output = io.StringIO()
         output.write("\ufeff")
         writer = csv.writer(output, delimiter=";")
-        writer.writerow(["Data/Hora", "Canal", "Tipo", "Equipe", "Site", "Mensagem"])
-        for data, cn, tipo, eq, site, msg in rows:
+        writer.writerow(["Data/Hora", "Canal", "Tipo", "Equipe", "Site", "Mensagem", "Comunicante"])
+        for data, cn, tipo, eq, site, msg, comunicante in rows:
             writer.writerow([
                 data.strftime("%d/%m/%Y %H:%M:%S") if data else "",
-                cn or "", tipo or "", eq or "", site or "", msg or "",
+                cn or "", tipo or "", eq or "", site or "", msg or "", comunicante or "",
             ])
         output.seek(0)
 
