@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Monitoramento SASI</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        /* ========== RESET & BASE ========== */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #f0f2f5;
+            color: #1e293b;
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* ========== SIDEBAR ========== */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 60px;
+            height: 100vh;
+            background: #1e293b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            z-index: 200;
+            transition: background 0.3s;
+        }
+        .sidebar-logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+        .sidebar-logo svg { width: 22px; height: 22px; }
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+        }
+        .sidebar-btn {
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            position: relative;
+        }
+        .sidebar-btn svg { width: 20px; height: 20px; stroke: #94a3b8; fill: none; stroke-width: 1.8; transition: stroke 0.2s; }
+        .sidebar-btn:hover { background: rgba(255,255,255,0.08); }
+        .sidebar-btn:hover svg { stroke: #fff; }
+        .sidebar-btn.active { background: rgba(37,99,235,0.2); }
+        .sidebar-btn.active svg { stroke: #60a5fa; }
+        .sidebar-btn .tooltip {
+            position: absolute;
+            left: 56px;
+            background: #1e293b;
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .sidebar-btn:hover .tooltip { opacity: 1; }
+        .sidebar-bottom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding-bottom: 8px;
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+            color: #fff;
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            margin-left: 60px;
+            transition: margin-left 0.3s;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header-left h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        .header-left .subtitle {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        .header-right .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ========== BARRA DE FILTROS ========== */
+        .filter-bar {
+            background: #fff;
+            margin: 20px 24px 0;
+            margin-left: 84px;
+            padding: 18px 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: flex-end;
+            gap: 16px;
+            flex-wrap: wrap;
+            transition: background 0.3s, box-shadow 0.3s, margin-left 0.3s;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 160px;
+        }
+        .filter-group label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .filter-group select {
+            padding: 9px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #334155;
+            background: #fff;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.3s, color 0.3s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+        .filter-group select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+        }
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            padding-bottom: 1px;
+        }
+        .btn {
+            padding: 9px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .btn-filter {
+            background: #2563eb;
+            color: #fff;
+        }
+        .btn-filter:hover { background: #1d4ed8; }
+        .btn-export {
+            background: #16a34a;
+            color: #fff;
+        }
+        .btn-export:hover { background: #15803d; }
+
+        /* ========== CONTEÚDO PRINCIPAL ========== */
+        .main-content {
+            padding: 20px 24px;
+            margin-left: 60px;
+            transition: margin-left 0.3s;
+        }
+
+        /* ========== KPI CARDS ========== */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .kpi-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            border-left: 4px solid;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .kpi-card .kpi-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+        .kpi-card .kpi-value {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .kpi-card .kpi-detail {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        .kpi-card.card-blue   { border-left-color: #2563eb; }
+        .kpi-card.card-blue .kpi-value   { color: #2563eb; }
+        .kpi-card.card-green  { border-left-color: #16a34a; }
+        .kpi-card.card-green .kpi-value  { color: #16a34a; }
+        .kpi-card.card-amber  { border-left-color: #d97706; }
+        .kpi-card.card-amber .kpi-value  { color: #d97706; }
+        .kpi-card.card-red    { border-left-color: #dc2626; }
+        .kpi-card.card-red .kpi-value    { color: #dc2626; }
+        .kpi-card.card-purple { border-left-color: #7c3aed; }
+        .kpi-card.card-purple .kpi-value { color: #7c3aed; }
+        .kpi-card.card-cyan   { border-left-color: #0891b2; }
+        .kpi-card.card-cyan .kpi-value   { color: #0891b2; }
+
+        /* ========== GRÁFICOS ========== */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .chart-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            overflow: hidden;
+            transition: background 0.3s;
+        }
+        .chart-card .chart-header {
+            padding: 16px 20px 0;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .chart-card .chart-body {
+            padding: 12px 16px 16px;
+            position: relative;
+        }
+
+        /* ========== TABELA ========== */
+        .table-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            overflow: hidden;
+            transition: background 0.3s;
+        }
+        .table-card .table-header {
+            padding: 16px 20px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #1e293b;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .table-card table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+        .table-card th {
+            background: #f8fafc;
+            padding: 10px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .table-card td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+        }
+        .table-card tbody tr:hover { background: #f8fafc; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+        .status-badge.sucesso   { background: #dcfce7; color: #15803d; }
+        .status-badge.pendente  { background: #fef9c3; color: #a16207; }
+        .status-badge.erro      { background: #fee2e2; color: #dc2626; }
+        .status-badge.processando { background: #dbeafe; color: #2563eb; }
+
+        /* ========== FOOTER ========== */
+        .footer {
+            text-align: center;
+            padding: 20px 24px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-left: 60px;
+        }
+
+        /* ========== DARK MODE ========== */
+        body.dark-mode {
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        body.dark-mode .sidebar { background: #0c1222; }
+        body.dark-mode .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); }
+        body.dark-mode .filter-bar { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark-mode .filter-group label { color: #94a3b8; }
+        body.dark-mode .filter-group select { background: #0f172a; color: #e2e8f0; border-color: #334155; }
+        body.dark-mode .kpi-card { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark-mode .kpi-card .kpi-label { color: #94a3b8; }
+        body.dark-mode .kpi-card .kpi-detail { color: #64748b; }
+        body.dark-mode .chart-card { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark-mode .chart-card .chart-header { color: #e2e8f0; }
+        body.dark-mode .table-card { background: #1e293b; box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+        body.dark-mode .table-card .table-header { color: #e2e8f0; border-bottom-color: #334155; }
+        body.dark-mode .table-card th { background: #0f172a; color: #94a3b8; border-bottom-color: #334155; }
+        body.dark-mode .table-card td { color: #cbd5e1; border-bottom-color: #1e293b; }
+        body.dark-mode .table-card tbody tr:hover { background: #0f172a; }
+        body.dark-mode .footer { color: #64748b; }
+        body.dark-mode .status-badge.sucesso { background: #14532d; color: #4ade80; }
+        body.dark-mode .status-badge.pendente { background: #422006; color: #fbbf24; }
+        body.dark-mode .status-badge.erro { background: #450a0a; color: #f87171; }
+        body.dark-mode .status-badge.processando { background: #172554; color: #60a5fa; }
+
+        /* Dark mode icon rotation */
+        .dark-mode-icon { transition: transform 0.3s; }
+        body.dark-mode .dark-mode-icon { transform: rotate(180deg); }
+
+        /* ========== RESPONSIVO ========== */
+        @media (max-width: 900px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .filter-buttons { justify-content: flex-start; }
+            .header { flex-direction: column; gap: 8px; text-align: center; }
+        }
+        @media (max-width: 600px) {
+            .kpi-row { grid-template-columns: 1fr 1fr; }
+            .main-content { padding: 12px; }
+            .filter-bar { margin: 12px; margin-left: 72px; padding: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ==================== SIDEBAR ==================== -->
+<nav class="sidebar">
+    <div class="sidebar-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+    </div>
+    <div class="sidebar-nav">
+        <button class="sidebar-btn active" onclick="scrollToSection('kpi-row')" title="Dashboard">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            <span class="tooltip">Dashboard</span>
+        </button>
+        <button class="sidebar-btn" onclick="scrollToSection('tabela-section')" title="Registros">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <span class="tooltip">Registros</span>
+        </button>
+        <button class="sidebar-btn" onclick="scrollToSection('charts-section')" title="Gráficos">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            <span class="tooltip">Gráficos</span>
+        </button>
+        <button class="sidebar-btn" onclick="exportarRelatorio()" title="Exportar">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span class="tooltip">Exportar</span>
+        </button>
+    </div>
+    <div class="sidebar-bottom">
+        <button class="sidebar-btn" onclick="toggleDarkMode()" title="Modo Escuro" id="btn-dark">
+            <svg class="dark-mode-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" id="icon-dark">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            <span class="tooltip" id="tooltip-dark">Modo Escuro</span>
+        </button>
+    </div>
+</nav>
+
+<!-- ==================== HEADER ==================== -->
+<header class="header">
+    <div class="header-left">
+        <img src="logo.png" id="main-logo" style="height: 60px;">
+        <div>
+            <h1>Monitoramento IIN</h1>
+            <span class="subtitle">Dashboard em Tempo Real</span>
+        </div>
+    </div>
+    <div class="header-right">
+        <span class="status-dot"></span>
+        <span id="header-status">Online — Recebendo dados</span>
+        <span id="header-clock"></span>
+    </div>
+</header>
+
+<!-- ==================== BARRA DE FILTROS ==================== -->
+<section class="filter-bar" id="filter-bar">
+    <div class="filter-group">
+        <label for="filter-canal">Canal</label>
+        <select id="filter-canal">
+            <option value="">Todos os Canais</option>
+            <option value="CHEGADA NO LOCAL">CHEGADA NO LOCAL</option>
+            <option value="SAÍDA DO LOCAL">SAÍDA DO LOCAL</option>
+            <option value="RONDA PERIÓDICA">RONDA PERIÓDICA</option>
+            <option value="RESPALDO">RESPALDO</option>
+            <option value="Visita">Visita</option>
+            <option value="INTERVALO">INTERVALO</option>
+            <option value="CHECKLIST VEÍCULO">CHECKLIST VEÍCULO</option>
+            <option value="OFICINA">OFICINA</option>
+            <option value="Checklist de Chaves">Checklist de Chaves</option>
+            <option value="DISPENSADO - CENTRAL">DISPENSADO - CENTRAL</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="filter-status">Status</label>
+        <select id="filter-status">
+            <option value="">Todos os Status</option>
+            <option value="sucesso">Sucesso</option>
+            <option value="pendente">Pendente</option>
+            <option value="processando">Processando</option>
+            <option value="erro">Erro</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="filter-equipe">Equipe</label>
+        <select id="filter-equipe">
+            <option value="">Todas as Equipes</option>
+            <option value="EQUIPE DE RESPOSTA">EQUIPE DE RESPOSTA</option>
+            <option value="Fiscalização">Fiscalização</option>
+            <option value="Manutenção - Técnicos">Manutenção - Técnicos</option>
+            <option value="Manutenção - Superv. Tec.">Manutenção - Superv. Tec.</option>
+            <option value="Almoxarifado - AM">Almoxarifado - AM</option>
+            <option value="Manutenção Emergencial - Técnicos">Manutenção Emergencial - Técnicos</option>
+            <option value="Terceirizados - Gestão">Terceirizados - Gestão</option>
+        </select>
+    </div>
+    <div class="filter-buttons">
+        <button class="btn btn-filter" id="btn-filtrar" onclick="aplicarFiltros()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filtrar
+        </button>
+        <button class="btn btn-export" id="btn-exportar" onclick="exportarRelatorio()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar Relatório
+        </button>
+    </div>
+</section>
+
+<!-- ==================== CONTEÚDO PRINCIPAL ==================== -->
+<main class="main-content">
+
+    <!-- KPI CARDS -->
+    <div class="kpi-row" id="kpi-row">
+        <div class="kpi-card card-blue">
+            <div class="kpi-label">Total de Alertas</div>
+            <div class="kpi-value" id="kpi-total">8.113</div>
+            <div class="kpi-detail">Acumulado geral</div>
+        </div>
+        <div class="kpi-card card-green">
+            <div class="kpi-label">Alertas (24h)</div>
+            <div class="kpi-value" id="kpi-hoje">8.112</div>
+            <div class="kpi-detail">Últimas 24 horas</div>
+        </div>
+        <div class="kpi-card card-amber">
+            <div class="kpi-label">Canais Ativos</div>
+            <div class="kpi-value" id="kpi-canais">47</div>
+            <div class="kpi-detail">Tipos de alerta</div>
+        </div>
+        <div class="kpi-card card-purple">
+            <div class="kpi-label">Equipes Ativas</div>
+            <div class="kpi-value" id="kpi-equipes">7</div>
+            <div class="kpi-detail">Recebendo alertas</div>
+        </div>
+        <div class="kpi-card card-red">
+            <div class="kpi-label">Erros</div>
+            <div class="kpi-value" id="kpi-erros">0</div>
+            <div class="kpi-detail">Últimas 24h</div>
+        </div>
+        <div class="kpi-card card-cyan">
+            <div class="kpi-label">Tempo Médio</div>
+            <div class="kpi-value" id="kpi-tempo">28<span style="font-size:1rem;font-weight:600;">ms</span></div>
+            <div class="kpi-detail">Resposta do endpoint</div>
+        </div>
+    </div>
+
+    <!-- GRÁFICOS LINHA 1: Rosca + Equipe + Horas (3 colunas) -->
+    <div class="charts-grid" id="charts-section" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="chart-card">
+            <div class="chart-header">Alertas por Canal</div>
+            <div class="chart-body">
+                <canvas id="chart-rosca" height="300"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">Atividade por Equipe</div>
+            <div class="chart-body">
+                <canvas id="chart-equipe" height="300"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">Alertas por Hora (24h)</div>
+            <div class="chart-body">
+                <canvas id="chart-linha" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- GRÁFICO LINHA 2: Tendência semanal (largura total) -->
+    <div style="margin-bottom: 20px;">
+        <div class="chart-card">
+            <div class="chart-header">Tendência Diária (7 dias)</div>
+            <div class="chart-body">
+                <canvas id="chart-barras" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABELA DE REGISTROS -->
+    <div class="table-card" id="tabela-section">
+        <div class="table-header">Registros</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Criado</th>
+                    <th>Canal</th>
+                    <th>Equipe</th>
+                    <th>Site</th>
+                    <th>Comunicante</th>
+                    <th>Mensagem</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-eventos"></tbody>
+        </table>
+    </div>
+
+</main>
+
+<footer class="footer">
+    Dashboard SASI — Monitoramento via Webhook &middot; Eloisa — IIN &middot; 2026
+</footer>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+// ==============================================================
+// CONFIGURAÇÃO: URL base da API
+// ==============================================================
+const API_BASE = window.location.protocol === "file:"
+    ? "https://webhook-dashboard-sasi.onrender.com"
+    : window.location.origin;
+
+// ==============================================================
+// DADOS SIMULADOS (fallback quando a API não está disponível)
+// ==============================================================
+const DADOS_SIMULADOS = {
+    canais: {
+        "CHEGADA NO LOCAL":    { total: 2850, cor: "#2563eb" },
+        "SAÍDA DO LOCAL":      { total: 2100, cor: "#f97316" },
+        "RONDA PERIÓDICA":     { total: 1350, cor: "#16a34a" },
+        "RESPALDO":            { total: 680,  cor: "#7c3aed" },
+        "Visita":              { total: 420,  cor: "#dc2626" },
+        "INTERVALO":           { total: 310,  cor: "#d97706" },
+        "CHECKLIST VEÍCULO":   { total: 180,  cor: "#0891b2" },
+        "OFICINA":             { total: 95,   cor: "#16a34a" },
+        "Checklist de Chaves": { total: 72,   cor: "#a855f7" },
+        "DISPENSADO - CENTRAL":{ total: 56,   cor: "#334155" }
+    },
+    equipes: {
+        "EQUIPE DE RESPOSTA": 3200,
+        "Fiscalização": 85,
+        "Manutenção - Técnicos": 75,
+        "Manutenção - Superv. Tec.": 60,
+        "Almoxarifado - AM": 45,
+        "Manutenção Emergencial - Técnicos": 30,
+        "Terceirizados - Gestão": 18
+    },
+    horasHoje: ["0h","1h","2h","3h","4h","5h","6h","7h","8h","9h","10h","11h","12h","13h","14h","15h","16h","17h","18h","19h","20h","21h","22h","23h"],
+    eventosPorHora: [50,30,20,15,10,25,120,350,650,1000,950,1050,800,1100,1200,1050,900,1300,1400,1350,750,500,350,200],
+    diasSemana: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+    eventosPorDia: [1350, 1280, 1420, 1380, 1300, 850, 533],
+    stats: { total_alertas: 8113, alertas_24h: 8112, canais_ativos: 47, equipes_ativas: 7, erros_24h: 0, tempo_medio_ms: 28 },
+    eventosRecentes: [
+        { data: "30/03/2026 22:15:33", canal: "CHEGADA NO LOCAL",   evento: "alerta_recebido",  equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Carlos Mendes",   comunicante: "Carlos Mendes", status: "sucesso" },
+        { data: "30/03/2026 22:14:58", canal: "RONDA PERIÓDICA",    evento: "ronda_concluida",   equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Silva Neto",      comunicante: "Silva Neto", status: "sucesso" },
+        { data: "30/03/2026 22:13:22", canal: "SAÍDA DO LOCAL",     evento: "saida_registrada",  equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. João Santos",     comunicante: "João Santos", status: "sucesso" },
+        { data: "30/03/2026 22:12:45", canal: "RESPALDO",           evento: "respaldo_enviado",  equipe: "Fiscalização",         usuario: "Fiscal Ana Lima",     comunicante: "Ana Lima", status: "sucesso" },
+        { data: "30/03/2026 22:11:10", canal: "CHECKLIST VEÍCULO",  evento: "checklist_ok",      equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Pedro Rocha",     comunicante: "Pedro Rocha", status: "sucesso" },
+        { data: "30/03/2026 22:10:30", canal: "CHEGADA NO LOCAL",   evento: "alerta_recebido",   equipe: "Manutenção - Técnicos",usuario: "Téc. Bruno Costa",    comunicante: "Bruno Costa", status: "sucesso" },
+        { data: "30/03/2026 22:09:55", canal: "Visita",             evento: "visita_registrada", equipe: "Terceirizados - Gestão",usuario: "Gest. Camila Reis",  comunicante: "Camila Reis", status: "pendente" },
+        { data: "30/03/2026 22:08:18", canal: "INTERVALO",          evento: "intervalo_inicio",  equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Marcos Dias",     comunicante: "Marcos Dias", status: "sucesso" },
+        { data: "30/03/2026 22:07:42", canal: "RONDA PERIÓDICA",    evento: "ronda_concluida",   equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Thiago Alves",    comunicante: "Thiago Alves", status: "sucesso" },
+        { data: "30/03/2026 22:06:15", canal: "SAÍDA DO LOCAL",     evento: "saida_registrada",  equipe: "Manutenção - Superv. Tec.", usuario: "Sup. Roberto Melo", comunicante: "Roberto Melo", status: "sucesso" },
+        { data: "30/03/2026 22:05:30", canal: "OFICINA",            evento: "os_aberta",         equipe: "Manutenção - Técnicos",usuario: "Téc. Lucas Souza",    comunicante: "Lucas Souza", status: "sucesso" },
+        { data: "30/03/2026 22:04:50", canal: "Checklist de Chaves",evento: "chaves_conferidas", equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Fernanda Nunes",  comunicante: "Fernanda Nunes", status: "sucesso" },
+        { data: "30/03/2026 22:03:22", canal: "CHEGADA NO LOCAL",   evento: "alerta_recebido",   equipe: "Almoxarifado - AM",    usuario: "Almox. Diego Barros", comunicante: "Diego Barros", status: "sucesso" },
+        { data: "30/03/2026 22:02:10", canal: "DISPENSADO - CENTRAL",evento: "dispensa_registrada",equipe: "EQUIPE DE RESPOSTA", usuario: "Op. Juliana Rocha",   comunicante: "Juliana Rocha", status: "sucesso" },
+        { data: "30/03/2026 22:01:05", canal: "RONDA PERIÓDICA",    evento: "ronda_concluida",   equipe: "EQUIPE DE RESPOSTA",   usuario: "Op. Patrícia Melo",   comunicante: "Patrícia Melo", status: "sucesso" }
+    ]
+};
+
+// ==============================================================
+// VARIÁVEIS GLOBAIS
+// ==============================================================
+let chartRosca, chartBarras, chartLinha, chartEquipe;
+let modoAPI = false;
+let refreshInterval = null;
+
+// ==============================================================
+// DARK MODE
+// ==============================================================
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    const iconEl = document.getElementById('icon-dark');
+    const tooltipEl = document.getElementById('tooltip-dark');
+
+    if (isDark) {
+        // Sun icon
+        iconEl.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        tooltipEl.textContent = 'Modo Claro';
+    } else {
+        // Moon icon
+        iconEl.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+        tooltipEl.textContent = 'Modo Escuro';
+    }
+
+    // Update chart colors for dark mode
+    if (chartRosca || chartBarras || chartLinha || chartEquipe) {
+        atualizarTudo();
+    }
+
+    try { localStorage.setItem('darkMode', isDark ? '1' : '0'); } catch(e) {}
+}
+
+// Restore dark mode preference
+try {
+    if (localStorage.getItem('darkMode') === '1') {
+        document.body.classList.add('dark-mode');
+        // Will update icon after DOM loads
+    }
+} catch(e) {}
+
+// ==============================================================
+// SIDEBAR NAVIGATION
+// ==============================================================
+function scrollToSection(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // Update active state
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+    }
+}
+
+// ==============================================================
+// CAMADA DE COMUNICAÇÃO COM A API
+// ==============================================================
+async function apiFetch(endpoint, params = {}) {
+    if (!API_BASE) return null;
+
+    const url = new URL(`${API_BASE}/api/dashboard/${endpoint}`);
+    Object.entries(params).forEach(([k, v]) => {
+        if (v) url.searchParams.set(k, v);
+    });
+
+    try {
+        const resp = await fetch(url.toString(), {
+            headers: { "Accept": "application/json" },
+            credentials: "include",
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return await resp.json();
+    } catch (err) {
+        console.warn(`[API] Falha em ${endpoint}:`, err.message);
+        return null;
+    }
+}
+
+function getFiltros() {
+    return {
+        canal:  document.getElementById("filter-canal").value,
+        status: document.getElementById("filter-status").value,
+        equipe: document.getElementById("filter-equipe").value,
+    };
+}
+
+// ==============================================================
+// INICIALIZAÇÃO
+// ==============================================================
+document.addEventListener("DOMContentLoaded", async () => {
+    Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+    Chart.defaults.font.size = 12;
+
+    atualizarRelogio();
+    setInterval(atualizarRelogio, 1000);
+
+    // Restore dark mode icon if needed
+    if (document.body.classList.contains('dark-mode')) {
+        const iconEl = document.getElementById('icon-dark');
+        const tooltipEl = document.getElementById('tooltip-dark');
+        if (iconEl) {
+            iconEl.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        }
+        if (tooltipEl) tooltipEl.textContent = 'Modo Claro';
+    }
+
+    // Tentar conectar à API real
+    if (API_BASE) {
+        const teste = await apiFetch("stats");
+        if (teste && !teste.erro) {
+            modoAPI = true;
+            console.log("[Dashboard] Conectado à API real:", API_BASE);
+            document.getElementById("header-status").textContent = "Online — Conectado à API";
+            await carregarFiltrosDinamicos();
+        }
+    }
+
+    if (!modoAPI) {
+        console.log("[Dashboard] Modo offline — usando dados simulados");
+        document.getElementById("header-status").textContent = "Modo Demo — Dados simulados";
+    }
+
+    await atualizarTudo();
+
+    if (modoAPI) {
+        refreshInterval = setInterval(atualizarTudo, 30000);
+    }
+});
+
+// ==============================================================
+// CARREGAR FILTROS DINÂMICOS DA API
+// ==============================================================
+async function carregarFiltrosDinamicos() {
+    const data = await apiFetch("filtros");
+    if (!data) return;
+
+    if (data.canais && data.canais.length) {
+        const sel = document.getElementById("filter-canal");
+        sel.innerHTML = '<option value="">Todos os Canais</option>';
+        data.canais.forEach(c => {
+            sel.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+    }
+
+    if (data.equipes && data.equipes.length) {
+        const sel = document.getElementById("filter-equipe");
+        sel.innerHTML = '<option value="">Todas as Equipes</option>';
+        data.equipes.forEach(e => {
+            sel.innerHTML += `<option value="${e}">${e}</option>`;
+        });
+    }
+}
+
+// ==============================================================
+// ATUALIZAR TUDO (orquestrador principal)
+// ==============================================================
+async function atualizarTudo() {
+    const filtros = getFiltros();
+
+    if (modoAPI) {
+        const [stats, canais, equipes, porDia, porHora, eventos] = await Promise.all([
+            apiFetch("stats", filtros),
+            apiFetch("por-canal", { equipe: filtros.equipe, dias: 30 }),
+            apiFetch("por-equipe", { canal: filtros.canal, dias: 30 }),
+            apiFetch("por-dia", { canal: filtros.canal, equipe: filtros.equipe, dias: 7 }),
+            apiFetch("por-hora", { canal: filtros.canal, equipe: filtros.equipe }),
+            apiFetch("eventos-recentes", filtros),
+        ]);
+
+        if (stats) {
+            animarKPI("kpi-total",   stats.total_eventos || stats.total_alertas || 0, true);
+            animarKPI("kpi-hoje",    stats.eventos_hoje || stats.alertas_24h || 0, true);
+            animarKPI("kpi-canais",  stats.canais_ativos || stats.apps_ativos || 0, false);
+            animarKPI("kpi-equipes", stats.equipes_ativas || 0, false);
+            animarKPI("kpi-erros",   stats.erros_24h || 0, false);
+            document.getElementById("kpi-tempo").innerHTML = `${stats.tempo_medio_ms}<span style="font-size:1rem;font-weight:600;">ms</span>`;
+        }
+
+        if (canais && canais.canais) {
+            criarGraficoRosca(canais.canais);
+        }
+
+        if (equipes && equipes.equipes) {
+            criarGraficoEquipe(equipes.equipes);
+        }
+
+        if (porDia && porDia.dados && porDia.dados.length) {
+            const labels = porDia.dados.map(d => d.dia_formatado);
+            const valores = porDia.dados.map(d => d.total);
+            criarGraficoBarras(labels, valores);
+        }
+
+        if (porHora && porHora.dados && porHora.dados.length) {
+            const labels = porHora.dados.map(d => d.hora);
+            const valores = porHora.dados.map(d => d.total);
+            criarGraficoLinha(labels, valores);
+        }
+
+        if (eventos && eventos.eventos) {
+            renderizarTabela(eventos.eventos);
+        }
+
+    } else {
+        atualizarComDadosSimulados(filtros);
+    }
+}
+
+// ==============================================================
+// MODO SIMULADO (fallback offline)
+// ==============================================================
+function atualizarComDadosSimulados(filtros) {
+    const DS = DADOS_SIMULADOS;
+
+    let eventosFiltrados = DS.eventosRecentes.filter(e => {
+        if (filtros.canal  && e.canal  !== filtros.canal)  return false;
+        if (filtros.status && e.status !== filtros.status) return false;
+        if (filtros.equipe && e.equipe !== filtros.equipe) return false;
+        return true;
+    });
+    renderizarTabela(eventosFiltrados);
+
+    const fator = eventosFiltrados.length / DS.eventosRecentes.length;
+
+    animarKPI("kpi-total",   Math.round(DS.stats.total_alertas * fator), true);
+    animarKPI("kpi-hoje",    Math.round(DS.stats.alertas_24h * fator), true);
+    animarKPI("kpi-canais",  Math.round(DS.stats.canais_ativos * fator), false);
+    animarKPI("kpi-equipes", Math.round(DS.stats.equipes_ativas * fator), false);
+    animarKPI("kpi-erros",   eventosFiltrados.filter(e => e.status === "erro").length || Math.round(DS.stats.erros_24h * fator), false);
+
+    if (filtros.canal) {
+        const d = {}; d[filtros.canal] = DS.canais[filtros.canal] || { total: 0, cor: "#64748b" };
+        criarGraficoRosca(d);
+    } else {
+        criarGraficoRosca(DS.canais);
+    }
+
+    if (filtros.equipe) {
+        const d = {}; d[filtros.equipe] = DS.equipes[filtros.equipe] || 0;
+        criarGraficoEquipe(d);
+    } else {
+        criarGraficoEquipe(DS.equipes);
+    }
+
+    criarGraficoBarras(DS.diasSemana, DS.eventosPorDia.map(v => Math.round(v * fator)));
+    criarGraficoLinha(DS.horasHoje, DS.eventosPorHora.map(v => Math.round(v * fator)));
+}
+
+// ==============================================================
+// GRÁFICOS
+// ==============================================================
+function getChartColors() {
+    const isDark = document.body.classList.contains('dark-mode');
+    return {
+        gridColor: isDark ? '#334155' : '#f1f5f9',
+        tickColor: isDark ? '#94a3b8' : '#64748b',
+        tickColorLight: isDark ? '#64748b' : '#94a3b8',
+        legendColor: isDark ? '#e2e8f0' : '#1e293b',
+    };
+}
+
+function criarGraficoRosca(canaisData) {
+    const ctx = document.getElementById("chart-rosca").getContext("2d");
+    const labels = Object.keys(canaisData);
+    const valores = labels.map(k => canaisData[k].total);
+    const cores = labels.map(k => canaisData[k].cor || "#64748b");
+    const colors = getChartColors();
+
+    if (chartRosca) chartRosca.destroy();
+    chartRosca = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: labels,
+            datasets: [{
+                data: valores,
+                backgroundColor: cores,
+                borderWidth: 2,
+                borderColor: document.body.classList.contains('dark-mode') ? '#1e293b' : '#fff',
+                hoverOffset: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "60%",
+            plugins: {
+                legend: { position: "right", labels: { padding: 14, usePointStyle: true, pointStyle: "circle", color: colors.legendColor } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                            return ` ${ctx.label}: ${ctx.parsed.toLocaleString("pt-BR")} (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function criarGraficoBarras(labels, data) {
+    const ctx = document.getElementById("chart-barras").getContext("2d");
+    const colors = getChartColors();
+    if (chartBarras) chartBarras.destroy();
+    chartBarras = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Eventos",
+                data: data,
+                backgroundColor: "rgba(37, 99, 235, 0.7)",
+                borderColor: "#2563eb",
+                borderWidth: 1,
+                borderRadius: 6,
+                barPercentage: 0.6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: colors.gridColor }, ticks: { color: colors.tickColorLight } },
+                x: { grid: { display: false }, ticks: { color: colors.tickColor } }
+            }
+        }
+    });
+}
+
+function criarGraficoLinha(labels, data) {
+    const ctx = document.getElementById("chart-linha").getContext("2d");
+    const colors = getChartColors();
+    if (chartLinha) chartLinha.destroy();
+    chartLinha = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Eventos/hora",
+                data: data,
+                borderColor: "#2563eb",
+                backgroundColor: "rgba(37, 99, 235, 0.08)",
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                pointBackgroundColor: "#2563eb"
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: colors.gridColor }, ticks: { color: colors.tickColorLight } },
+                x: { grid: { display: false }, ticks: { color: colors.tickColor, maxTicksLimit: 12 } }
+            }
+        }
+    });
+}
+
+function criarGraficoEquipe(equipesData) {
+    const ctx = document.getElementById("chart-equipe").getContext("2d");
+    const labels = Object.keys(equipesData);
+    const data = Object.values(equipesData);
+    const cores = ["#2563eb", "#7c3aed", "#0891b2", "#d97706", "#16a34a"];
+    const colors = getChartColors();
+
+    if (chartEquipe) chartEquipe.destroy();
+    chartEquipe = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Eventos",
+                data: data,
+                backgroundColor: cores.slice(0, data.length).map(c => c + "B3"),
+                borderColor: cores.slice(0, data.length),
+                borderWidth: 1,
+                borderRadius: 6,
+                barPercentage: 0.6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: "y",
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, grid: { color: colors.gridColor }, ticks: { color: colors.tickColorLight } },
+                y: { grid: { display: false }, ticks: { color: colors.tickColor } }
+            }
+        }
+    });
+}
+
+// ==============================================================
+// TABELA (colunas: Status, Criado, Canal, Equipe, Site, Comunicante, Mensagem)
+// ==============================================================
+function renderizarTabela(eventos) {
+    const tbody = document.getElementById("tabela-eventos");
+    if (!eventos || !eventos.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px;">Nenhum registro encontrado para os filtros selecionados.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = eventos.map(e => {
+        const statusText = e.status ? e.status.charAt(0).toUpperCase() + e.status.slice(1) : '—';
+        const statusClass = e.status || '';
+        return `
+        <tr>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            <td>${e.data || '—'}</td>
+            <td>${e.canal || '—'}</td>
+            <td>${e.equipe || '—'}</td>
+            <td>${e.usuario || '—'}</td>
+            <td>${e.comunicante || e.usuario || '—'}</td>
+            <td>${e.mensagem || e.evento || '—'}</td>
+        </tr>`;
+    }).join("");
+}
+
+// ==============================================================
+// RELÓGIO DO HEADER
+// ==============================================================
+function atualizarRelogio() {
+    const now = new Date();
+    document.getElementById("header-clock").textContent =
+        now.toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit" });
+}
+
+// ==============================================================
+// ANIMAÇÃO DOS KPIs
+// ==============================================================
+function animarKPI(id, valorFinal, formatarMilhar) {
+    const el = document.getElementById(id);
+    const valorAtual = parseInt(el.textContent.replace(/\./g, "").replace(/\D/g, "")) || 0;
+    const diff = valorFinal - valorAtual;
+    if (diff === 0) return;
+
+    const duracao = 400;
+    const frames = 20;
+    const incremento = diff / frames;
+    let frame = 0;
+
+    const interval = setInterval(() => {
+        frame++;
+        const val = Math.round(valorAtual + incremento * frame);
+        el.textContent = formatarMilhar ? val.toLocaleString("pt-BR") : val;
+        if (frame >= frames) {
+            clearInterval(interval);
+            el.textContent = formatarMilhar ? valorFinal.toLocaleString("pt-BR") : valorFinal;
+        }
+    }, duracao / frames);
+}
+
+// ==============================================================
+// AÇÃO: FILTRAR (botão)
+// ==============================================================
+async function aplicarFiltros() {
+    const btn = document.getElementById("btn-filtrar");
+    btn.textContent = "Carregando...";
+    btn.style.background = "#64748b";
+
+    await atualizarTudo();
+
+    btn.textContent = "Aplicado!";
+    btn.style.background = "#16a34a";
+    setTimeout(() => {
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg> Filtrar';
+        btn.style.background = "#2563eb";
+    }, 1200);
+}
+
+// ==============================================================
+// AÇÃO: EXPORTAR RELATÓRIO
+// ==============================================================
+async function exportarRelatorio() {
+    const filtros = getFiltros();
+    const btn = document.getElementById("btn-exportar");
+
+    if (modoAPI) {
+        const url = new URL(`${API_BASE}/api/dashboard/exportar`);
+        if (filtros.canal)  url.searchParams.set("canal", filtros.canal);
+        if (filtros.status) url.searchParams.set("status", filtros.status);
+        if (filtros.equipe) url.searchParams.set("equipe", filtros.equipe);
+        window.open(url.toString(), "_blank");
+    } else {
+        let dados = DADOS_SIMULADOS.eventosRecentes.filter(e => {
+            if (filtros.canal  && e.canal  !== filtros.canal)  return false;
+            if (filtros.status && e.status !== filtros.status) return false;
+            if (filtros.equipe && e.equipe !== filtros.equipe) return false;
+            return true;
+        });
+
+        const header = "Status;Criado;Canal;Equipe;Site;Comunicante;Mensagem\n";
+        const linhas = dados.map(e =>
+            `${e.status};${e.data};${e.canal};${e.equipe};${e.usuario};${e.comunicante || e.usuario};${e.mensagem || e.evento}`
+        ).join("\n");
+
+        const blob = new Blob(["\uFEFF" + header + linhas], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `relatorio-sasi-${new Date().toISOString().slice(0,10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    btn.textContent = "Exportado!";
+    setTimeout(() => {
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar Relatório';
+    }, 1500);
+}
+</script>
+
+</body>
+</html>
