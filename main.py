@@ -10,6 +10,20 @@ from dashboard_routes import dashboard_bp
 app = Flask(__name__)
 app.register_blueprint(dashboard_bp)
 
+# ── Auto-migração: adicionar coluna comunicante
+def _run_migrations():
+    try:
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor()
+        cur.execute("ALTER TABLE registros ADD COLUMN IF NOT EXISTS comunicante TEXT")
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception:
+        pass
+
+_run_migrations()
+
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 
@@ -104,11 +118,13 @@ def webhook():
         prioridade = sasi.get("priority", 0)
         lat = location.get("lat")
         lng = location.get("lng")
+        mobile = sasi.get("MobileProfile", {}) or {}
+        comunicante = mobile.get("name")
 
         cur.execute(
-            """INSERT INTO registros (canal, mensagem, equipe, site_nome, tipo, prioridade, lat, lng)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
-            (canal, mensagem, equipe, site_nome, tipo, prioridade, lat, lng)
+            """INSERT INTO registros (canal, mensagem, equipe, site_nome, tipo, prioridade, lat, lng, comunicante)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (canal, mensagem, equipe, site_nome, tipo, prioridade, lat, lng, comunicante)
         )
         cur.execute(
             "INSERT INTO webhook_logs (raw_json) VALUES (%s)",
