@@ -440,7 +440,8 @@
                     <th>Evento</th>
                     <th>Equipe</th>
                     <th>Usuário</th>
-                    <th>Status</th>
+                    <th>Comunicante</th>
+                        <th>Status</th>
                 </tr>
             </thead>
             <tbody id="tabela-eventos"></tbody>
@@ -875,6 +876,7 @@ function renderizarTabela(eventos) {
             <td>${e.evento}</td>
             <td>${e.equipe}</td>
             <td>${e.usuario}</td>
+            <td>${e.comunicante || ""}</td>
             <td><span class="status-badge ${e.status}">${e.status.charAt(0).toUpperCase() + e.status.slice(1)}</span></td>
         </tr>
     `).join("");
@@ -956,9 +958,9 @@ async function exportarRelatorio() {
             return true;
         });
 
-        const header = "Data/Hora;Canal;Evento;Equipe;Usuário;Status\n";
+        const header = "Data/Hora;Canal;Evento;Equipe;Usuário;Comunicante;Status\n";
         const linhas = dados.map(e =>
-            `${e.data};${e.canal};${e.evento};${e.equipe};${e.usuario};${e.status}`
+            `${e.data};${e.canal};${e.evento};${e.equipe};${e.usuario};${e.comunicante || ""};${e.status}`
         ).join("\n");
 
         const blob = new Blob(["\uFEFF" + header + linhas], { type: "text/csv;charset=utf-8;" });
