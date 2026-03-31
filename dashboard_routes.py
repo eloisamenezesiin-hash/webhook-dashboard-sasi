@@ -7,7 +7,7 @@ Usa psycopg2 (mesmo driver do main.py) para consultar Supabase.
 import os
 import csv
 import io
-import json
+import jsonh
 from flask import Blueprint, jsonify, request, Response, send_from_directory
 
 import psycopg2
@@ -376,7 +376,7 @@ def api_debug_raw():
         conn = _get_conn()
         cur = conn.cursor()
         cur.execute(
-            "SELECT id, raw_json, created_at FROM webhook_logs "
+                        "SELECT id, raw_json FROM webhook_logs "
             "ORDER BY id DESC LIMIT 3"
         )
         rows = cur.fetchall()
@@ -384,14 +384,13 @@ def api_debug_raw():
         conn.close()
 
         samples = []
-        for row_id, raw, created in rows:
+                for row_id, raw in rows:
             try:
                 parsed = json.loads(raw) if isinstance(raw, str) else raw
             except Exception:
                 parsed = {"_raw_text": str(raw)[:500]}
             samples.append({
                 "id": row_id,
-                "created_at": str(created) if created else "",
                 "keys_nivel_1": list(parsed.keys()) if isinstance(parsed, dict) else [],
                 "keys_data": list(parsed.get("data", {}).keys()) if isinstance(parsed, dict) and isinstance(parsed.get("data"), dict) else [],
                 "raw_json": parsed,
