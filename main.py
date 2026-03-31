@@ -5,8 +5,10 @@ import psycopg2
 import time
 import hashlib
 import functools
+from dashboard_routes import dashboard_bp
 
 app = Flask(__name__)
+app.register_blueprint(dashboard_bp)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
