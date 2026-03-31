@@ -191,7 +191,7 @@ def api_por_hora():
             params.append(equipe)
         w = " WHERE " + " AND ".join(where)
         cur.execute(
-            "SELECT EXTRACT(HOUR FROM data) as hora, COUNT(*) as total "
+            "SELECT EXTRACT(HOUR FROM data AT TIME ZONE 'America/Manaus') as hora, COUNT(*) as total "
             "FROM registros" + w +
             " GROUP BY hora ORDER BY hora",
             params
@@ -227,7 +227,7 @@ def api_por_dia():
             params.append(equipe)
         w = " WHERE " + " AND ".join(where)
         cur.execute(
-            "SELECT data::date as dia, COUNT(*) as total "
+            "SELECT (data AT TIME ZONE 'America/Manaus')::date as dia, COUNT(*) as total "
             "FROM registros" + w +
             " GROUP BY dia ORDER BY dia",
             params
@@ -267,7 +267,7 @@ def api_eventos_recentes():
         w = (" WHERE " + " AND ".join(where)) if where else ""
         params.append(int(limite))
         cur.execute(
-            "SELECT data, canal, tipo, equipe, site_nome, mensagem, comunicante "
+            "SELECT data AT TIME ZONE 'America/Manaus' as data, canal, tipo, equipe, site_nome, mensagem, comunicante "
             "FROM registros" + w +
             " ORDER BY data DESC LIMIT %s",
             params
