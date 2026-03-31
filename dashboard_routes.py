@@ -7,6 +7,7 @@ Usa psycopg2 (mesmo driver do main.py) para consultar Supabase.
 import os
 import csv
 import io
+import json
 from flask import Blueprint, jsonify, request, Response, send_from_directory
 
 import psycopg2
@@ -362,5 +363,39 @@ def api_exportar():
                 "Content-Disposition": "attachment; filename=relatorio-sasi.csv"
             },
         )
+    except Exception as e:
+        return jsonify({"erro": str(e)})
+
+
+# ================================================================
+# 9. /api/debug/raw-sample - Ver estrutura do JSON bruto
+# ================================================================
+@dashboard_bp.route("/api/debug/raw-sample")
+def api_debug_raw():
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, raw_json, created_at FROM webhook_logs "
+            "ORDER BY id DESC LIMIT 3"
+        )
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        samples = []
+        for row_id, raw, created in rows:
+            try:
+                parsed = json.loads(raw) if isinstance(raw, str) else raw
+            except Exception:
+                parsed = {"_raw_text": str(raw)[:500]}
+            samples.append({
+                "id": row_id,
+                "created_at": str(created) if created else "",
+                "keys_nivel_1": list(parsed.keys()) if isinstance(parsed, dict) else [],
+                "keys_data": list(parsed.get("data", {}).keys()) if isinstance(parsed, dict) and isinstance(parsed.get("data"), dict) else [],
+                "raw_json": parsed,
+            })
+        return jsonify({"total_samples": len(samples), "samples": samples})
     except Exception as e:
         return jsonify({"erro": str(e)})
