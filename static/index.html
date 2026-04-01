@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+<static>
+<index class="html"></index><!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -1099,7 +1100,7 @@ function renderizarTabela(eventos) {
             <td>${e.equipe || '—'}</td>
             <td>${e.usuario || '—'}</td>
             <td>${e.comunicante || e.usuario || '—'}</td>
-            <td>${e.evento || '—'}</td>
+            <td>${e.mensagem || e.evento || '—'}</td>
         </tr>`;
     }).join("");
 }
@@ -1179,7 +1180,7 @@ async function exportarRelatorio() {
 
         const header = "Status;Criado;Canal;Equipe;Site;Comunicante;Mensagem\n";
         const linhas = dados.map(e =>
-            `${e.status};${e.data};${e.canal};${e.equipe};${e.usuario};${e.comunicante || e.usuario};${e.evento}`
+            `${e.status};${e.data};${e.canal};${e.equipe};${e.usuario};${e.comunicante || e.usuario};${e.mensagem || e.evento}
         ).join("\n");
 
         const blob = new Blob(["\uFEFF" + header + linhas], { type: "text/csv;charset=utf-8;" });
