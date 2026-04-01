@@ -169,8 +169,6 @@ def api_por_equipe():
         return jsonify({"equipes": equipes})
     except Exception as e:
         return jsonify({"equipes": {}, "erro": str(e)})
-
-
 # ================================================================
 # 4. /api/dashboard/por-hora - Grafico de linha (24h)
 # ================================================================
@@ -293,7 +291,60 @@ def api_eventos_recentes():
 
 
 # ================================================================
-# 7. /api/dashboard/filtros - Valores para os dropdowns
+# 7. /api/dashboard/resumo - Resumo geral para o painel
+# ================================================================
+@dashboard_bp.route("/api/dashboard/resumo")
+def api_resumo():
+    canal = request.args.get("canal")
+    equipe = request.args.get("equipe")
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        where = []
+        params = []
+        if canal:
+            where.append("canal = %s")
+            params.append(canal)
+        if equipe:
+            where.append("equipe = %s")
+            params.append(equipe)
+        w = (" WHERE " + " AND ".join(where)) if where else ""
+
+        cur.execute("SELECT COUNT(*) FROM registros" + w, params)
+        total = cur.fetchone()[0]
+
+        w24 = " WHERE data >= NOW() - INTERVAL '24 hours'"
+        if where:
+            w24 += " AND " + " AND ".join(where)
+        cur.execute("SELECT COUNT(*) FROM registros" + w24, params)
+        total_24h = cur.fetchone()[0]
+
+        w7d = " WHERE data >= NOW() - INTERVAL '7 days'"
+        if where:
+            w7d += " AND " + " AND ".join(where)
+        cur.execute("SELECT COUNT(*) FROM registros" + w7d, params)
+        total_7d = cur.fetchone()[0]
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "total_registros": total,
+            "registros_24h": total_24h,
+            "registros_7d": total_7d,
+        })
+    except Exception as e:
+        return jsonify({
+            "erro": str(e),
+            "total_registros": 0,
+            "registros_24h": 0,
+            "registros_7d": 0,
+        })
+
+
+# ================================================================
+# 8. /api/dashboard/filtros - Valores para os dropdowns
 # ================================================================
 @dashboard_bp.route("/api/dashboard/filtros")
 def api_filtros():
@@ -373,7 +424,7 @@ def api_exportar():
 # ================================================================
 @dashboard_bp.route("/api/debug/raw-sample")
 def api_debug_raw():
-    """Retorna amostras do raw_json da tabela webhook_logs para análise."""
+    """Retorna amostras do raw_json da tabela webhook_logs para anÃ¡lise."""
     try:
         conn = _get_conn()
         cur = conn.cursor()
@@ -401,3 +452,20 @@ def api_debug_raw():
         return jsonify({"total_samples": len(samples), "samples": samples})
     except Exception as e:
         return jsonify({"erro": str(e)})
+
+
+# ================================================================
+# /health - Health check para Render e monitoramento
+# ================================================================
+@dashboard_bp.route("/health")
+def health_check():
+    """Endpoint de health check. Testa conexÃ£o com o banco."""
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        cur.close()
+        conn.close()
+        return jsonify({"status": "ok", "database": "connected"})
+    except Exception as e:
+        return jsonify({"status": "error", "database": str(e)}), 503
