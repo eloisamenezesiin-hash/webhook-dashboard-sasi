@@ -281,7 +281,7 @@ def api_eventos_recentes():
             eventos.append({
                 "data": data.strftime("%d/%m/%Y %H:%M:%S") if data else "",
                 "canal": cn or "",
-                "evento": tipo or "",
+                "evento": msg or tipo or "",
                 "mensagem": msg or "",
                 "equipe": eq or "",
                 "usuario": site or "",
