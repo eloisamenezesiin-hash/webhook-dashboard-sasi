@@ -1,5 +1,4 @@
-<static>
-<index class="html"></index><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -390,6 +389,200 @@
         .dark-mode-icon { transition: transform 0.3s; }
         body.dark-mode .dark-mode-icon { transform: rotate(180deg); }
 
+        /* ========== BOTÃO LIMPAR FILTROS ========== */
+        .btn-clear {
+            background: transparent;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-clear:hover { background: #f1f5f9; color: #dc2626; border-color: #dc2626; }
+        body.dark-mode .btn-clear { color: #94a3b8; border-color: #475569; }
+        body.dark-mode .btn-clear:hover { background: #1e293b; color: #f87171; border-color: #f87171; }
+
+        .btn-search {
+            background: #7c3aed;
+            color: #fff;
+        }
+        .btn-search:hover { background: #6d28d9; }
+
+        /* ========== MODAL BUSCA POR CAMPO ========== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: #fff;
+            border-radius: 16px;
+            padding: 32px;
+            width: 90%;
+            max-width: 560px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        body.dark-mode .modal { background: #1e293b; }
+
+        .modal-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 24px;
+        }
+        body.dark-mode .modal-title { color: #e2e8f0; }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #94a3b8;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-size: 1.2rem;
+        }
+        .modal-close:hover { background: #f1f5f9; color: #1e293b; }
+        body.dark-mode .modal-close:hover { background: #334155; color: #e2e8f0; }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .modal-grid .modal-field.full-width { grid-column: 1 / -1; }
+
+        .modal-field label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+        .modal-field label .required { color: #dc2626; margin-left: 2px; }
+        body.dark-mode .modal-field label { color: #cbd5e1; }
+
+        .modal-field select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: #1e293b;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+        .modal-field select:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+            background: #fff;
+        }
+        body.dark-mode .modal-field select {
+            background: #0f172a; border-color: #334155; color: #e2e8f0;
+        }
+        body.dark-mode .modal-field select:focus {
+            border-color: #60a5fa; background: #1e293b;
+        }
+
+        .modal-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 8px;
+        }
+        .modal-actions button {
+            font-size: 0.82rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .modal-actions .modal-add-filter { color: #2563eb; }
+        .modal-actions .modal-add-filter:hover { text-decoration: underline; }
+        .modal-actions .modal-clear-link { color: #94a3b8; }
+        .modal-actions .modal-clear-link:hover { color: #dc2626; }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        body.dark-mode .modal-footer { border-top-color: #334155; }
+
+        .modal-footer .btn-cancel {
+            padding: 10px 24px;
+            background: transparent;
+            border: 1px solid #cbd5e1;
+            color: #64748b;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-footer .btn-cancel:hover { background: #f1f5f9; }
+        body.dark-mode .modal-footer .btn-cancel { border-color: #475569; color: #94a3b8; }
+
+        .modal-footer .btn-pesquisar {
+            padding: 10px 24px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-footer .btn-pesquisar:hover { background: #1d4ed8; }
+
+        .active-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .filter-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: #ede9fe;
+            color: #6d28d9;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .filter-tag button {
+            background: none; border: none; cursor: pointer;
+            color: #6d28d9; font-size: 0.9rem; line-height: 1; padding: 0;
+        }
+        .filter-tag button:hover { color: #dc2626; }
+        body.dark-mode .filter-tag { background: #2e1065; color: #a78bfa; }
+        body.dark-mode .filter-tag button { color: #a78bfa; }
+
         /* ========== RESPONSIVO ========== */
         @media (max-width: 900px) {
             .charts-grid { grid-template-columns: 1fr; }
@@ -523,11 +716,20 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
             Filtrar
         </button>
+        <button class="btn btn-search" onclick="abrirBuscaAvancada()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Busca por Campo
+        </button>
+        <button class="btn btn-clear" onclick="limparFiltros()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Limpar Filtros
+        </button>
         <button class="btn btn-export" id="btn-exportar" onclick="exportarRelatorio()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Exportar Relatório
+            Exportar
         </button>
     </div>
+    <div class="active-filters" id="active-filters"></div>
 </section>
 
 <!-- ==================== CONTEÚDO PRINCIPAL ==================== -->
@@ -619,6 +821,69 @@
     </div>
 
 </main>
+
+<!-- ==================== MODAL BUSCA POR CAMPO ==================== -->
+<div class="modal-overlay" id="modal-busca">
+    <div class="modal">
+        <h2 class="modal-title">Busca por campo</h2>
+        <button class="modal-close" onclick="fecharBuscaAvancada()">&times;</button>
+
+        <div class="modal-grid">
+            <div class="modal-field">
+                <label>Aplicativo <span class="required">*</span></label>
+                <select id="busca-app" onchange="atualizarCamposBusca()">
+                    <option value="">Selecione...</option>
+                    <option value="Frota">Frota</option>
+                    <option value="Portaria">Portaria</option>
+                    <option value="Ronda">Ronda</option>
+                    <option value="Ocorrencias">Ocorrências</option>
+                    <option value="Manutencao">Manutenção</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <label>Canal <span class="required">*</span></label>
+                <select id="busca-canal">
+                    <option value="">Selecione...</option>
+                </select>
+            </div>
+            <div class="modal-field full-width">
+                <label>Campo <span class="required">*</span></label>
+                <select id="busca-campo">
+                    <option value="">Selecione o aplicativo primeiro</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <label>Operação</label>
+                <select id="busca-operacao">
+                    <option value="igual">É igual</option>
+                    <option value="contem">Contém</option>
+                    <option value="diferente">É diferente</option>
+                    <option value="vazio">Está vazio</option>
+                    <option value="nao_vazio">Não está vazio</option>
+                </select>
+            </div>
+            <div class="modal-field">
+                <label>Opção</label>
+                <select id="busca-opcao">
+                    <option value="">Selecione...</option>
+                    <option value="Conforme">Conforme</option>
+                    <option value="Não Conforme">Não Conforme</option>
+                    <option value="N/A">N/A</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="modal-add-filter" onclick="adicionarFiltroBusca()">+ Adicionar mais buscas</button>
+            <button class="modal-clear-link" onclick="limparBuscaAvancada()">&#x2297; Limpar filtros</button>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="fecharBuscaAvancada()">Cancelar</button>
+            <button class="btn-pesquisar" onclick="executarBuscaAvancada()">Pesquisar</button>
+        </div>
+    </div>
+</div>
 
 <footer class="footer">
     Dashboard SASI — Monitoramento via Webhook &middot; Eloisa — IIN &middot; 2026
@@ -1180,7 +1445,7 @@ async function exportarRelatorio() {
 
         const header = "Status;Criado;Canal;Equipe;Site;Comunicante;Mensagem\n";
         const linhas = dados.map(e =>
-            `${e.status};${e.data};${e.canal};${e.equipe};${e.usuario};${e.comunicante || e.usuario};${e.mensagem || e.evento}
+            `${e.status};${e.data};${e.canal};${e.equipe};${e.usuario};${e.comunicante || e.usuario};${e.mensagem || e.evento}`
         ).join("\n");
 
         const blob = new Blob(["\uFEFF" + header + linhas], { type: "text/csv;charset=utf-8;" });
@@ -1197,6 +1462,176 @@ async function exportarRelatorio() {
         btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar Relatório';
     }, 1500);
 }
+
+// ==============================================================
+// BUSCA AVANÇADA POR CAMPO (Modal)
+// ==============================================================
+const CAMPOS_POR_APP = {
+    Frota: {
+        canais: ["Carro", "Moto", "Caminhão", "Van"],
+        campos: ["Cartão Sodexo*", "CNH Motorista*", "CRLV Veículo*", "Checklist Veículo*", "Km Inicial*", "Km Final*", "Nível Combustível*", "Estado Pneus*", "Extintor*", "Triângulo*", "Macaco/Chave*", "Estepe*", "Documentos*", "Avarias Externas*", "Limpeza Interna*"],
+        opcoes: ["Conforme", "Não Conforme", "N/A", "Vencido", "OK", "Avariado"]
+    },
+    Portaria: {
+        canais: ["Entrada", "Saída", "Visitante", "Prestador"],
+        campos: ["Crachá*", "Documento Identidade*", "Autorização Acesso*", "Veículo Cadastrado*", "Biometria*", "Foto Capturada*", "Motivo Visita*", "Destino*", "Responsável*"],
+        opcoes: ["Conforme", "Não Conforme", "N/A", "Pendente", "Liberado", "Bloqueado"]
+    },
+    Ronda: {
+        canais: ["RONDA PERIÓDICA", "RONDA NOTURNA", "RONDA ESPECIAL"],
+        campos: ["Ponto de Ronda*", "QR Code Lido*", "Ocorrência Identificada*", "Foto Evidência*", "Iluminação*", "Cerca/Portão*", "Câmeras Funcionando*", "Área Limpa*"],
+        opcoes: ["Conforme", "Não Conforme", "N/A", "Atención"]
+    },
+    Ocorrencias: {
+        canais: ["RESPALDO", "Incidente", "Urgência"],
+        campos: ["Tipo Ocorrência*", "Gravidade*", "Local Exato*", "Testemunhas*", "Foto/Vídeo*", "Providências*", "Comunicado Polícia*", "Relatório Anexo*"],
+        opcoes: ["Registrado", "Em Andamento", "Resolvido", "Encaminhado", "Pendente"]
+    },
+    Manutencao: {
+        canais: ["OFICINA", "CHECKLIST VEÍCULO", "Preventiva", "Corretiva"],
+        campos: ["Ordem de Serviço*", "Tipo Manutenção*", "Peça Substituída*", "Mecânico Responsável*", "Prazo Entrega*", "Custo Estimado*", "Status Aprovação*", "Garantia*"],
+        opcoes: ["Conforme", "Não Conforme", "Aprovado", "Reprovado", "Aguardando Peça", "Concluído"]
+    }
+};
+
+function abrirBuscaAvancada() {
+    document.getElementById('modal-busca').classList.add('active');
+}
+
+function fecharBuscaAvancada() {
+    document.getElementById('modal-busca').classList.remove('active');
+}
+
+function atualizarCamposBusca() {
+    const app = document.getElementById('busca-app').value;
+    const canalSelect = document.getElementById('busca-canal');
+    const campoSelect = document.getElementById('busca-campo');
+    const opcaoSelect = document.getElementById('busca-opcao');
+
+    canalSelect.innerHTML = '<option value="">Selecione...</option>';
+    campoSelect.innerHTML = '<option value="">Selecione...</option>';
+    opcaoSelect.innerHTML = '<option value="">Selecione...</option>';
+
+    if (app && CAMPOS_POR_APP[app]) {
+        const config = CAMPOS_POR_APP[app];
+        config.canais.forEach(c => {
+            canalSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+        config.campos.forEach(c => {
+            campoSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+        config.opcoes.forEach(o => {
+            opcaoSelect.innerHTML += `<option value="${o}">${o}</option>`;
+        });
+    }
+}
+
+let buscasAvancadas = [];
+
+function adicionarFiltroBusca() {
+    const app = document.getElementById('busca-app').value;
+    const canal = document.getElementById('busca-canal').value;
+    const campo = document.getElementById('busca-campo').value;
+    const operacao = document.getElementById('busca-operacao').value;
+    const opcao = document.getElementById('busca-opcao').value;
+
+    if (!app || !campo) {
+        alert('Selecione pelo menos o Aplicativo e o Campo.');
+        return;
+    }
+
+    buscasAvancadas.push({ app, canal, campo, operacao, opcao });
+    renderizarTagsFiltro();
+
+    // Reset campo e opção for next filter
+    document.getElementById('busca-campo').value = '';
+    document.getElementById('busca-opcao').value = '';
+}
+
+function renderizarTagsFiltro() {
+    const container = document.getElementById('active-filters');
+    container.innerHTML = buscasAvancadas.map((f, i) => {
+        const opLabel = { igual: '=', contem: '~', diferente: '≠', vazio: 'vazio', nao_vazio: '≠ vazio' }[f.operacao] || '=';
+        return `<span class="filter-tag">${f.app} › ${f.campo} ${opLabel} ${f.opcao || '*'}<button onclick="removerFiltroBusca(${i})">&times;</button></span>`;
+    }).join('');
+}
+
+function removerFiltroBusca(index) {
+    buscasAvancadas.splice(index, 1);
+    renderizarTagsFiltro();
+    if (buscasAvancadas.length === 0) aplicarFiltros();
+}
+
+function limparBuscaAvancada() {
+    document.getElementById('busca-app').value = '';
+    document.getElementById('busca-canal').innerHTML = '<option value="">Selecione...</option>';
+    document.getElementById('busca-campo').innerHTML = '<option value="">Selecione o aplicativo primeiro</option>';
+    document.getElementById('busca-opcao').innerHTML = '<option value="">Selecione...</option>';
+    document.getElementById('busca-operacao').value = 'igual';
+    buscasAvancadas = [];
+    renderizarTagsFiltro();
+}
+
+function executarBuscaAvancada() {
+    // Add current fields as filter if filled
+    const app = document.getElementById('busca-app').value;
+    const campo = document.getElementById('busca-campo').value;
+    if (app && campo) {
+        adicionarFiltroBusca();
+    }
+
+    fecharBuscaAvancada();
+
+    // Apply the advanced filters to the table
+    if (buscasAvancadas.length > 0) {
+        // Set the equipe filter to the first app's matching equipe if possible
+        const firstApp = buscasAvancadas[0].app;
+        const equipeSelect = document.getElementById('filter-equipe');
+        // Try to match app name with an equipe
+        for (let opt of equipeSelect.options) {
+            if (opt.value.toLowerCase().includes(firstApp.toLowerCase())) {
+                equipeSelect.value = opt.value;
+                break;
+            }
+        }
+        // Set canal filter if available
+        const firstCanal = buscasAvancadas[0].canal;
+        if (firstCanal) {
+            const canalSelect = document.getElementById('filter-canal');
+            for (let opt of canalSelect.options) {
+                if (opt.value === firstCanal || opt.value.includes(firstCanal)) {
+                    canalSelect.value = opt.value;
+                    break;
+                }
+            }
+        }
+    }
+
+    aplicarFiltros();
+}
+
+function limparFiltros() {
+    document.getElementById('filter-canal').value = '';
+    document.getElementById('filter-status').value = '';
+    document.getElementById('filter-equipe').value = '';
+    buscasAvancadas = [];
+    renderizarTagsFiltro();
+    aplicarFiltros();
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+    if (e.target.id === 'modal-busca') {
+        fecharBuscaAvancada();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        fecharBuscaAvancada();
+    }
+});
 </script>
 
 </body>
