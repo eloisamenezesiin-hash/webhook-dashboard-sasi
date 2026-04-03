@@ -33,13 +33,12 @@ def _add_date_filter(where, params):
         params.append(data_fim)
 
 
-def _mnt_equipe_filter(equipe, equipes_default):
+def _mnt_equipe_filter(equipe):
     """Retorna (where_clause, params_list) para filtro de equipe Manutenção."""
     if equipe:
         return "equipe = %s", [equipe]
     else:
-        ph = ", ".join(["%s"] * len(equipes_default))
-        return f"equipe IN ({ph})", list(equipes_default)
+        return "equipe LIKE %s", ["Manutenção%"]
 
 
 # ================================================================
@@ -538,13 +537,7 @@ def api_manutencao_stats():
         conn = _get_conn()
         cur = conn.cursor()
 
-        equipes_mnt = [
-            "Manutenção - Técnicos",
-            "Manutenção Emergencial - Técnicos",
-            "Manutenção - Superv. Tec.",
-            "Manutenção - Terceirizados",
-        ]
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, equipes_mnt)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -611,11 +604,7 @@ def api_manutencao_por_tecnico():
         conn = _get_conn()
         cur = conn.cursor()
 
-        equipes_mnt = [
-            "Manutenção - Técnicos",
-            "Manutenção Emergencial - Técnicos",
-        ]
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, equipes_mnt)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause, "comunicante IS NOT NULL", "comunicante != ''"]
         base_params = list(eq_params)
@@ -670,11 +659,7 @@ def api_manutencao_por_cliente():
         conn = _get_conn()
         cur = conn.cursor()
 
-        equipes_mnt = [
-            "Manutenção - Técnicos",
-            "Manutenção Emergencial - Técnicos",
-        ]
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, equipes_mnt)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [
             eq_clause,
@@ -724,11 +709,7 @@ def api_manutencao_por_canal():
         conn = _get_conn()
         cur = conn.cursor()
 
-        equipes_mnt = [
-            "Manutenção - Técnicos",
-            "Manutenção Emergencial - Técnicos",
-        ]
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, equipes_mnt)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [
             eq_clause,
@@ -765,11 +746,7 @@ def api_manutencao_por_mes():
         conn = _get_conn()
         cur = conn.cursor()
 
-        equipes_mnt = [
-            "Manutenção - Técnicos",
-            "Manutenção Emergencial - Técnicos",
-        ]
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, equipes_mnt)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [
             eq_clause,
