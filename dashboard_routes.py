@@ -533,10 +533,13 @@ def api_debug_raw():
 def api_manutencao_stats():
     """KPIs focados em Manutenção: total saída, por técnico, por status."""
     equipe = request.args.get("equipe")
+    step = "init"
     try:
+        step = "connect"
         conn = _get_conn()
         cur = conn.cursor()
 
+        step = "filter"
         eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
@@ -544,35 +547,37 @@ def api_manutencao_stats():
         _add_date_filter(base_where, base_params)
         w = " WHERE " + " AND ".join(base_where)
 
-        # Total alertas
-        cur.execute("SELECT COUNT(*) FROM registros" + w, base_params)
+        step = "total"
+        sql_total = "SELECT COUNT(*) FROM registros" + w
+        cur.execute(sql_total, base_params)
         total = cur.fetchone()[0]
 
-        # Total saída
-        ws = w + " AND (canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')"
-        cur.execute("SELECT COUNT(*) FROM registros" + ws, base_params)
+        step = "saida"
+        cur.execute(sql_total + " AND (canal LIKE %s OR canal LIKE %s)",
+                    base_params + ["Saída%", "Sa_da%"])
         total_saida = cur.fetchone()[0]
 
-        # Total entrada
-        we = w + " AND canal LIKE 'Entrada%'"
-        cur.execute("SELECT COUNT(*) FROM registros" + we, base_params)
+        step = "entrada"
+        cur.execute(sql_total + " AND canal LIKE %s",
+                    base_params + ["Entrada%"])
         total_entrada = cur.fetchone()[0]
 
-        # Tentar contar OS por status via mensagem (busca 'Conclu' e 'pendência')
-        wc = w + " AND (canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')"
+        step = "mensagens"
         cur.execute(
-            "SELECT mensagem FROM registros" + wc +
+            "SELECT mensagem FROM registros" + w +
+            " AND (canal LIKE %s OR canal LIKE %s)"
             " AND mensagem IS NOT NULL",
-            base_params
+            base_params + ["Saída%", "Sa_da%"]
         )
         msgs = cur.fetchall()
         os_concluidas = 0
         os_pendentes = 0
-        for (msg,) in msgs:
-            ml = (msg or "").lower()
+        step = "parse_msgs"
+        for row in msgs:
+            ml = (row[0] or "").lower()
             if "conclu" in ml:
                 os_concluidas += 1
-            if "pendên" in ml or "penden" in ml or "pendenc" in ml:
+            if "pend" in ml:
                 os_pendentes += 1
 
         cur.close()
@@ -584,10 +589,14 @@ def api_manutencao_stats():
             "total_entrada": total_entrada,
             "os_concluidas": os_concluidas,
             "os_pendentes": os_pendentes,
+            "v": 3,
         })
     except Exception as e:
+        import traceback
         return jsonify({
             "erro": str(e),
+            "step": step,
+            "trace": traceback.format_exc()[-500:],
             "total_alertas": 0, "total_saida": 0,
             "total_entrada": 0, "os_concluidas": 0, "os_pendentes": 0,
         })
