@@ -141,7 +141,7 @@
         }
 
         /* ========== DATE PICKER ========== */
-        .date-picker-wrapper { position: relative; }
+        .date-picker-wrapper { position: relative; flex: none !important; min-width: auto !important; }
         .date-picker-btn {
             padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
             font-size: 0.85rem; color: #334155; background: #fff; cursor: pointer;
@@ -208,6 +208,9 @@
             align-items: flex-end;
             gap: 16px;
             flex-wrap: wrap;
+            overflow: visible;
+            position: relative;
+            z-index: 100;
             transition: background 0.3s, box-shadow 0.3s, margin-left 0.3s;
         }
         .filter-group {
@@ -751,7 +754,7 @@
     </div>
     <div class="filter-group">
         <label for="filter-canal">Canal</label>
-        <select id="filter-canal">
+        <select id="filter-canal" onchange="aplicarFiltros()">
             <option value="">Todos os Canais</option>
             <option value="CHEGADA NO LOCAL">CHEGADA NO LOCAL</option>
             <option value="SAÍDA DO LOCAL">SAÍDA DO LOCAL</option>
@@ -766,18 +769,8 @@
         </select>
     </div>
     <div class="filter-group">
-        <label for="filter-status">Status</label>
-        <select id="filter-status">
-            <option value="">Todos os Status</option>
-            <option value="sucesso">Sucesso</option>
-            <option value="pendente">Pendente</option>
-            <option value="processando">Processando</option>
-            <option value="erro">Erro</option>
-        </select>
-    </div>
-    <div class="filter-group">
         <label for="filter-equipe">Equipe</label>
-        <select id="filter-equipe">
+        <select id="filter-equipe" onchange="aplicarFiltros()">
             <option value="">Todas as Equipes</option>
             <option value="EQUIPE DE RESPOSTA">EQUIPE DE RESPOSTA</option>
             <option value="Fiscalização">Fiscalização</option>
@@ -912,24 +905,27 @@
                     <option value="">Selecione...</option>
                     <option value="EQUIPE DE RESPOSTA">Equipe de Resposta</option>
                     <option value="Fiscalização">Fiscalização</option>
-                    <option value="Almoxarifado - AM">Almoxarifado - AM</option>
                     <option value="Manutenção - Técnicos">Manutenção - Técnicos</option>
-                    <option value="Manutenção Emergencial - Técnicos">Manutenção Emergencial</option>
+                    <option value="Manutenção Emergencial - Técnicos">Manutenção Emergencial - Técnicos</option>
+                    <option value="Manutenção Emergencial - Superv.">Manutenção Emergencial - Superv.</option>
                     <option value="Manutenção - Superv. Tec.">Manutenção - Superv. Tec.</option>
                     <option value="Manutenção - Terceirizados">Manutenção - Terceirizados</option>
                     <option value="Terceirizados - Gestão">Terceirizados - Gestão</option>
+                    <option value="Laboratório e Tecnologia">Laboratório e Tecnologia</option>
+                    <option value="Frota">Frota</option>
+                    <option value="Apoio Logístico">Apoio Logístico</option>
                 </select>
             </div>
             <div class="modal-field">
                 <label>Canal <span class="required">*</span></label>
-                <select id="busca-canal">
+                <select id="busca-canal" onchange="atualizarCamposPorCanal()">
                     <option value="">Selecione...</option>
                 </select>
             </div>
             <div class="modal-field full-width">
-                <label>Campo <span class="required">*</span></label>
+                <label>Campo (pergunta do formulário) <span class="required">*</span></label>
                 <select id="busca-campo">
-                    <option value="">Selecione o aplicativo primeiro</option>
+                    <option value="">Selecione o aplicativo e canal</option>
                 </select>
             </div>
             <div class="modal-field">
@@ -1104,7 +1100,6 @@ async function apiFetch(endpoint, params = {}) {
 function getFiltros() {
     const f = {
         canal:  document.getElementById("filter-canal").value,
-        status: document.getElementById("filter-status").value,
         equipe: document.getElementById("filter-equipe").value,
     };
     if (dpStartDate) f.data_inicio = fmtDate(dpStartDate);
@@ -1241,7 +1236,6 @@ function atualizarComDadosSimulados(filtros) {
 
     let eventosFiltrados = DS.eventosRecentes.filter(e => {
         if (filtros.canal  && e.canal  !== filtros.canal)  return false;
-        if (filtros.status && e.status !== filtros.status) return false;
         if (filtros.equipe && e.equipe !== filtros.equipe) return false;
         return true;
     });
@@ -1627,7 +1621,6 @@ async function exportarRelatorio() {
     if (modoAPI) {
         const url = new URL(`${API_BASE}/api/dashboard/exportar`);
         if (filtros.canal)  url.searchParams.set("canal", filtros.canal);
-        if (filtros.status) url.searchParams.set("status", filtros.status);
         if (filtros.equipe) url.searchParams.set("equipe", filtros.equipe);
         if (filtros.data_inicio) url.searchParams.set("data_inicio", filtros.data_inicio);
         if (filtros.data_fim) url.searchParams.set("data_fim", filtros.data_fim);
@@ -1635,14 +1628,13 @@ async function exportarRelatorio() {
     } else {
         let dados = DADOS_SIMULADOS.eventosRecentes.filter(e => {
             if (filtros.canal  && e.canal  !== filtros.canal)  return false;
-            if (filtros.status && e.status !== filtros.status) return false;
             if (filtros.equipe && e.equipe !== filtros.equipe) return false;
             return true;
         });
 
-        const header = "Status;Criado;Canal;Equipe;Site;Comunicante;Mensagem\n";
+        const header = "Criado;Canal;Equipe;Site;Comunicante;Mensagem\n";
         const linhas = dados.map(e =>
-            `${e.status};${e.data};${e.canal};${e.equipe};${e.usuario};${e.comunicante || e.usuario};${e.mensagem || e.evento}`
+            `${e.data};${e.canal};${e.equipe};${e.usuario};${e.comunicante || e.usuario};${e.mensagem || e.evento}`
         ).join("\n");
 
         const blob = new Blob(["\uFEFF" + header + linhas], { type: "text/csv;charset=utf-8;" });
@@ -1665,44 +1657,120 @@ async function exportarRelatorio() {
 // ==============================================================
 const CAMPOS_POR_APP = {
     "EQUIPE DE RESPOSTA": {
-        canais: ["ABASTECIMENTO", "CHAVE", "CHECKLIST VEÍCULO", "CHEGADA NO LOCAL", "CHUVA", "Checklist de Chaves", "DISPENSADO - CENTRAL", "GESTÃO ADM", "INTERVALO", "OCORRÊNCIA ABORTADA", "OFICINA", "PROBLEMA TÉCNICO", "PROBLEMAS COM CARTÃO", "RESPALDO", "RONDA DEDICADA", "RONDA PERIÓDICA", "SAÍDA DO LOCAL", "VANDALISMO E FURTO"],
-        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
-        opcoes: ["sucesso", "erro", "pendente"]
+        canais: ["Relatório por zona", "Chegada no local", "Registro de Ocorrências", "Respaldo", "Problema Técnico/Cartão", "Problema Técnico", "Problemas com Cartão", "Checklist de Chaves", "Controle de Chaves e Acessos", "Teste de Chave", "Corrente/Cadeado", "Ronda Periódica", "Entrega/Resgate", "Ronda", "Vandalismo e Furto", "Atendimento Impossibilitado", "Chuva", "Ronda Dedicada", "Gestão ADM", "ADM - Equipe de Resposta", "Checklist Veículo", "Dispensado - Central", "Intervalo", "Oficina", "Tempo de espera", "Abastecimento", "Saída do local", "Ocorrência Abortada", "Condensadora", "Respaldo Formulário", "Ponte", "Serviço de Terceiros", "Ronda preventiva", "Furto/Vandalismo", "Acidente de Trânsito", "Ocorrência Sensível"],
+        camposPorCanal: {
+            "Chegada no local": ["Clientes", "Unidade DPE", "Unidade MANAUSPREV", "Unidade SEDUC", "Unidade SEMEF", "Unidades SEMSA", "Unidades SEMED", "Unidades UGPE", "Unidades IIN"],
+            "Checklist Veículo": ["Placa do veículo", "KM atual", "Nível de combustível", "Estado dos pneus", "Estado da lataria", "Observações"],
+            "Ronda Periódica": ["Unidade", "Situação encontrada", "Providências tomadas", "Observações"],
+            "Ronda Dedicada": ["Unidade", "Situação encontrada", "Providências tomadas", "Observações"],
+            "Respaldo": ["Unidade", "Descrição da ocorrência", "Providências tomadas"],
+            "Problema Técnico": ["Unidade", "Tipo de problema", "Descrição", "Providências"],
+            "Problemas com Cartão": ["Unidade", "Tipo de problema", "Descrição"],
+            "Abastecimento": ["Placa do veículo", "KM atual", "Litros", "Tipo de combustível", "Valor"],
+            "Gestão ADM": ["Assunto", "Descrição", "Providências"],
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
     },
     "Fiscalização": {
-        canais: ["Cadastramento", "Entrega de Imagens", "Melhorias", "Ocorrência Real", "Ronda Periódica e Base Alternativa", "Solicitação Supervisor de Análise", "Solicitação de Agente de Portaria", "Suporte IIN", "Visita"],
-        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
-        opcoes: ["sucesso", "erro", "pendente"]
-    },
-    "Almoxarifado - AM": {
-        canais: ["Devolução de Material - GAE", "Devolução de Material - MNT", "Devolução de Material - OFICINA", "Solicitação de Material - GAE", "Solicitação de Material - MNT", "Solicitação de Material - OFICINA"],
-        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
-        opcoes: ["sucesso", "erro", "pendente"]
+        canais: ["Visita Operacional", "Chegada no Local", "Saída do Local", "Melhorias de Sistema", "Auditoria", "Análise técnica", "Solicitação de Agente de Portaria", "Suporte IIN"],
+        camposPorCanal: {
+            "Visita Operacional": ["Unidade", "Fiscal responsável", "Observações", "Pendências"],
+            "Chegada no Local": ["Unidade", "Hora de chegada", "Fiscal responsável"],
+            "Saída do Local": ["Unidade", "Hora de saída", "Fiscal responsável", "Resumo"],
+            "Auditoria": ["Unidade", "Tipo de auditoria", "Observações", "Pendências"],
+            "Solicitação de Agente de Portaria": ["Unidade", "Necessidade", "Quantidade", "Observações"],
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
     },
     "Manutenção - Técnicos": {
-        canais: ["Entrada - Alarme", "Entrada - CDA", "Entrada - CFTV", "Saída - Alarme", "Saída - CDA", "Saída - CFTV"],
-        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
-        opcoes: ["sucesso", "erro", "pendente"]
+        canais: ["Serviços", "Final de Semana", "Entrada - F. de Semana", "Saída - F. de Semana", "Alarme", "Entrada - Alarme", "Saída - Alarme", "Cadastramento - Alarme", "Troca de Chip", "Controle de Acesso", "Entrada - CDA", "Saída - CDA", "Cadastramento - CDA", "CFTV", "Entrada - CFTV", "Saída - CFTV", "Checklist - Retirada de Imagem", "Finalização de Instalação", "Entrada - F. de Inst.", "Saída - F. de Inst.", "Melhorias", "Entrada - Melhorias", "Saída - Melhorias", "Monitoramento", "Mobile"],
+        camposPorCanal: {
+            "Saída - Alarme": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades IIN Tecnologia", "Unidades SEMSEG", "Unidades MDC", "Unidade SEDURB", "Outra Unidade", "ID da 1ª O.S", "ID da 2ª O.S", "Deseja adicionar + de 1 O.S?", "ID da 3ª O.S", "ID da 4ª O.S", "ID da 5ª O.S", "Status do Serviço - ID 1", "Status do Serviço - ID 2", "Status do Serviço - ID 3", "Status do Serviço - ID 4", "Status do Serviço - ID 5", "Serviço realizado", "Bola Extintora", "Ventoinhas Funcionando", "Nobreak Funcionando", "Material usado", "Descreva material usado", "Serviço extra realizado", "Descreva serviço extra realizado"],
+            "Saída - CDA": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades MDC", "Unidades SEMSEG", "Unidades IIN Tecnologia", "Unidade SEDURB", "Outra Unidade", "ID da 1ª O.S", "Deseja adicionar + de 1 O.S?", "ID da 2ª O.S", "ID da 3ª O.S", "ID da 4ª O.S", "ID da 5ª O.S", "Status do Serviço - ID 1", "Status do Serviço - ID 2", "Status do Serviço - ID 3", "Status do Serviço - ID 4", "Status do Serviço - ID 5", "Serviço realizado", "Bola Extintora", "Ventoinhas Funcionando", "Nobreak Funcionando", "Material usado", "Descreva material usado", "Serviço extra realizado", "Descreva serviço extra realizado"],
+            "Saída - CFTV": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades SEMSEG", "Unidades MDC", "Unidade SEDURB", "Unidades IIN Tecnologia", "Outra Unidade", "ID da 1ª O.S", "Deseja adicionar + de 1 O.S?", "ID da 2ª O.S", "ID da 3ª O.S", "ID da 4ª O.S", "ID da 5ª O.S", "Status do Serviço - ID 1", "Status do Serviço - ID 2", "Status do Serviço - ID 3", "Status do Serviço - ID 4", "Status do Serviço - ID 5", "Serviço realizado", "Bola Extintora", "Ventoinhas Funcionando", "Nobreak Funcionando", "Material usado", "Descreva material usado", "Serviço extra realizado", "Descreva serviço extra realizado"],
+            "Saída - F. de Semana": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades IIN Tecnologia", "Unidades SEMSEG", "Unidades MDC", "Unidade SEDURB", "Outra Unidade", "Número da OCC", "Selecione o tipo de serviço", "Serviço Realizado"],
+            "Saída - F. de Inst.": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades SEMSEG", "Unidades IIN Tecnologia", "Unidades MDC", "Unidade SEDURB", "Outra Unidade", "ID da 1ª O.S", "Deseja adicionar + de 1 O.S?", "ID da 2ª O.S", "ID da 3ª O.S", "ID da 4ª O.S", "ID da 5ª O.S", "Status do Serviço - ID 1", "Status do Serviço - ID 2", "Status do Serviço - ID 3", "Status do Serviço - ID 4", "Status do Serviço - ID 5", "Serviço realizado", "Bola Extintora", "Ventoinhas Funcionando", "Nobreak Funcionando", "Material usado", "Descreva material usado", "Serviço extra realizado", "Descreva serviço extra realizado"],
+            "Saída - Melhorias": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades SEMSEG", "Unidades IIN Tecnologia", "Unidade SEDURB", "Outra Unidade", "ID da 1ª O.S", "Deseja adicionar + de 1 O.S?", "ID da 2ª O.S", "ID da 3ª O.S", "ID da 4ª O.S", "ID da 5ª O.S", "Selecione o tipo de serviço", "Status do Serviço - ID 1", "Status do Serviço - ID 2", "Status do Serviço - ID 3", "Status do Serviço - ID 4", "Status do Serviço - ID 5", "Serviço realizado", "Bola Extintora", "Ventoinhas Funcionando", "Nobreak Funcionando", "Material usado", "Descreva material usado", "Serviço extra realizado", "Descreva serviço extra realizado"],
+            "Checklist - Retirada de Imagem": ["Unidade", "Período", "Quantidade de câmeras", "Observações"],
+            "Troca de Chip": ["Unidade", "Número antigo", "Número novo", "Operadora"],
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
     },
     "Manutenção Emergencial - Técnicos": {
-        canais: ["Almoxarifado - Elet.", "Almoxarifado - Predial", "Almoxarifado - Ref.", "Entrada - Elet.", "Entrada - Ref.", "Saída - Elet.", "Saída - Predial", "Saída - Ref."],
-        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
-        opcoes: ["sucesso", "erro", "pendente"]
+        canais: ["Elétrica", "Almoxarifado - Elet.", "Entrada - Elet.", "Saída - Elet.", "Refrigeração", "Almoxarifado - Ref.", "Entrada - Ref.", "Saída - Ref.", "Infraestrutura", "Final de Semana", "Entrada F. de Semana", "Saída F. de Semana", "Predial", "Almoxarifado - Predial", "Entrada - Predial", "Saída - Predial", "Serviços Gerais", "Almoxarifado - Serv. Gerais", "Entrada - Serv. Gerais", "Saída - Serv. Gerais", "Melhorias", "Almoxarifado - Melhorias", "Entrada - Melhorias", "Saída - Melhorias", "Vidro", "Entrada - Vidro", "Saída - Vidro", "Checklist de Ferramentas", "Notícias", "Reportar BUG", "Mobile", "Monitoramento"],
+        camposPorCanal: {
+            "Saída - Elet.": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades SEMSEG", "Unidade SEDURB", "Status do Serviço", "Respaldo"],
+            "Saída - Ref.": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades SEMSEG", "Unidade SEDURB", "Status do Serviço", "Serviço Realizado"],
+            "Saída - Predial": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades SEMSEG", "Unidade SEDURB", "Status do Serviço", "Serviço Realizado"],
+            "Saída - Serv. Gerais": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades SEMSEG", "Unidade SEDURB", "Status do Serviço", "Serviço Realizado"],
+            "Saída - Melhorias": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades SEMSEG", "Unidade SEDURB", "Status do Serviço", "Serviço Realizado"],
+            "Saída - Vidro": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades SEMSEG", "Unidade SEDURB", "Serviço Realizado", "Status do Serviço"],
+            "Saída F. de Semana": ["Clientes", "Unidades DPE", "Unidades ManausPrev", "Unidades SEDUC", "Unidades SEMED", "Unidades SEMEF", "Unidades SEMSA", "Unidades UGPE", "Unidades SEMSEG", "Unidade SEDURB", "Tipo de Serviço", "Serviço Realizado"],
+            "Checklist de Ferramentas": ["Técnico", "Lista de ferramentas", "Estado", "Observações"],
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
+    },
+    "Manutenção Emergencial - Superv.": {
+        canais: ["Almoxarifado", "Entrada - F. Técnica", "Saída - F. Técnica", "Levantamento", "Relatório Técnico"],
+        camposPorCanal: {
+            "Levantamento": ["Unidade", "Tipo", "Descrição", "Materiais necessários"],
+            "Relatório Técnico": ["Unidade", "Serviço executado", "Materiais utilizados", "Pendências"],
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
     },
     "Manutenção - Superv. Tec.": {
-        canais: ["Entrada - Sup. Técnica", "Saída - Sup. Técnica"],
-        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
-        opcoes: ["sucesso", "erro", "pendente"]
+        canais: ["Entrada - Sup. Técnica", "Saída - Sup. Técnica", "Cadastramento", "Troca de Chip", "Almoxarifado - MNT"],
+        camposPorCanal: {
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
     },
     "Manutenção - Terceirizados": {
-        canais: ["Chegada no Local", "Saída do Local"],
-        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
-        opcoes: ["sucesso", "erro", "pendente"]
+        canais: ["Chegada no Local", "Saída do Local", "Relatório"],
+        camposPorCanal: {
+            "Chegada no Local": ["Unidade", "Técnico", "Empresa", "Hora de chegada"],
+            "Saída do Local": ["Unidade", "Técnico", "Empresa", "Serviço realizado"],
+            "Relatório": ["Unidade", "Serviço executado", "Materiais", "Observações"],
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
     },
     "Terceirizados - Gestão": {
-        canais: ["Chegada no Local", "Saída do Local"],
-        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
-        opcoes: ["sucesso", "erro", "pendente"]
+        canais: ["Chegada no Local", "Saída do Local", "Checklist de Implantação"],
+        camposPorCanal: {
+            "Checklist de Implantação": ["Unidade", "Itens verificados", "Pendências", "Responsável"],
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
+    },
+    "Laboratório e Tecnologia": {
+        canais: ["Chegada", "Saída", "Respaldo", "Registro de Serviços", "Download Remoto", "Config. DVR", "Checklist Nobreak", "Serviço Externo"],
+        camposPorCanal: {
+            "Registro de Serviços": ["Equipamento", "Tipo de serviço", "Descrição", "Status"],
+            "Download Remoto": ["Unidade", "DVR", "Período", "Observações"],
+            "Config. DVR": ["Unidade", "Modelo DVR", "Configuração", "Observações"],
+            "Checklist Nobreak": ["Unidade", "Modelo", "Estado da bateria", "Observações"],
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
+    },
+    "Frota": {
+        canais: ["Check List Diário", "Carro", "Moto", "Carro reserva", "Moto reserva", "Abastecimento", "Acidente", "MNT Veículo", "Lavagem"],
+        camposPorCanal: {
+            "Carro": ["Nome do Condutor", "Selecione a Empresa", "Placa", "KM", "Observações"],
+            "Moto": ["Nome do Condutor", "Selecione a Empresa", "Placa", "KM", "Observações"],
+            "Check List Diário": ["Veículo", "Placa", "KM", "Nível de combustível", "Estado geral"],
+            "Abastecimento": ["Veículo", "Placa", "KM", "Litros", "Valor"],
+            "Acidente": ["Veículo", "Condutor", "Local", "Descrição", "Danos"],
+            "MNT Veículo": ["Veículo", "Tipo de manutenção", "Descrição", "Oficina"],
+            "Lavagem": ["Veículo", "Placa", "Tipo de lavagem"],
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
+    },
+    "Apoio Logístico": {
+        canais: ["CHECKLIST VEICULO", "REMANEJAMENTO AGP", "REMANEJAMENTO MOTO"],
+        camposPorCanal: {
+            "CHECKLIST VEICULO": ["Veículo", "Placa", "KM", "Estado geral", "Observações"],
+            "REMANEJAMENTO AGP": ["Agente", "Origem", "Destino", "Motivo"],
+            "REMANEJAMENTO MOTO": ["Moto", "Origem", "Destino", "Motivo"],
+            "_default": ["Mensagem", "Evento", "Usuário"]
+        }
     }
 };
 
@@ -1721,7 +1789,7 @@ function atualizarCamposBusca() {
     const opcaoInput = document.getElementById('busca-opcao');
 
     canalSelect.innerHTML = '<option value="">Todos os canais</option>';
-    campoSelect.innerHTML = '<option value="">Selecione...</option>';
+    campoSelect.innerHTML = '<option value="">Selecione o canal</option>';
     opcaoInput.value = '';
 
     if (app && CAMPOS_POR_APP[app]) {
@@ -1729,7 +1797,40 @@ function atualizarCamposBusca() {
         config.canais.forEach(c => {
             canalSelect.innerHTML += `<option value="${c}">${c}</option>`;
         });
-        config.campos.forEach(c => {
+        // Mostra campos genéricos até selecionar canal
+        const defaults = (config.camposPorCanal && config.camposPorCanal["_default"]) || ["Mensagem", "Evento", "Usuário"];
+        defaults.forEach(c => {
+            campoSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+    }
+}
+
+function atualizarCamposPorCanal() {
+    const app = document.getElementById('busca-app').value;
+    const canal = document.getElementById('busca-canal').value;
+    const campoSelect = document.getElementById('busca-campo');
+
+    campoSelect.innerHTML = '<option value="">Selecione...</option>';
+
+    if (!app || !CAMPOS_POR_APP[app]) return;
+
+    const config = CAMPOS_POR_APP[app];
+    const camposCanal = (config.camposPorCanal && canal && config.camposPorCanal[canal]) || null;
+    const defaults = (config.camposPorCanal && config.camposPorCanal["_default"]) || ["Mensagem", "Evento", "Usuário"];
+
+    if (camposCanal) {
+        // Mostra campos específicos do formulário do canal
+        camposCanal.forEach(c => {
+            campoSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+        // Adiciona separador e campos genéricos
+        campoSelect.innerHTML += '<option disabled>──────────</option>';
+        defaults.forEach(c => {
+            campoSelect.innerHTML += `<option value="${c}">${c}</option>`;
+        });
+    } else {
+        // Sem campos específicos — mostra genéricos
+        defaults.forEach(c => {
             campoSelect.innerHTML += `<option value="${c}">${c}</option>`;
         });
     }
@@ -1761,7 +1862,8 @@ function renderizarTagsFiltro() {
     const container = document.getElementById('active-filters');
     container.innerHTML = buscasAvancadas.map((f, i) => {
         const opLabel = { igual: '=', contem: '~', diferente: '≠', vazio: 'vazio', nao_vazio: '≠ vazio' }[f.operacao] || '=';
-        return `<span class="filter-tag">${f.app} › ${f.campo} ${opLabel} ${f.opcao || '*'}<button onclick="removerFiltroBusca(${i})">&times;</button></span>`;
+        const canalLabel = f.canal ? ` › ${f.canal}` : '';
+        return `<span class="filter-tag">${f.app}${canalLabel} › ${f.campo} ${opLabel} ${f.opcao || '*'}<button onclick="removerFiltroBusca(${i})">&times;</button></span>`;
     }).join('');
 }
 
@@ -1774,7 +1876,7 @@ function removerFiltroBusca(index) {
 function limparBuscaAvancada() {
     document.getElementById('busca-app').value = '';
     document.getElementById('busca-canal').innerHTML = '<option value="">Selecione...</option>';
-    document.getElementById('busca-campo').innerHTML = '<option value="">Selecione o aplicativo primeiro</option>';
+    document.getElementById('busca-campo').innerHTML = '<option value="">Selecione o aplicativo e canal</option>';
     document.getElementById('busca-opcao').value = '';
     document.getElementById('busca-operacao').value = 'igual';
     buscasAvancadas = [];
@@ -1806,7 +1908,9 @@ function executarBuscaAvancada() {
         }
 
         // Apply text-based filtering on table rows
-        const campoMap = { 'Canal': 2, 'Equipe': 3, 'Usuário': 4, 'Status': 0, 'Mensagem': 6, 'Evento': 6 };
+        // Campos genéricos mapeiam para colunas específicas da tabela
+        // Campos de formulário (perguntas) buscam nas colunas Evento(5) + Mensagem(6)
+        const campoColMap = { 'Canal': 2, 'Equipe': 3, 'Usuário': 4, 'Site': 4, 'Mensagem': 6, 'Evento': 5 };
         const tbody = document.querySelector('#tabela-eventos tbody');
         if (tbody) {
             const rows = tbody.querySelectorAll('tr');
@@ -1815,15 +1919,23 @@ function executarBuscaAvancada() {
                 if (cells.length === 0) return;
                 let show = true;
                 for (const filtro of buscasAvancadas) {
-                    const colIdx = campoMap[filtro.campo];
-                    if (colIdx === undefined) continue;
-                    const cellText = (cells[colIdx] ? cells[colIdx].textContent : '').toLowerCase().trim();
+                    let textoParaBusca = '';
+                    if (campoColMap[filtro.campo] !== undefined) {
+                        // Campo genérico — busca em coluna específica
+                        const colIdx = campoColMap[filtro.campo];
+                        textoParaBusca = (cells[colIdx] ? cells[colIdx].textContent : '').toLowerCase().trim();
+                    } else {
+                        // Campo de formulário — busca no Evento + Mensagem combinados
+                        const evento = (cells[5] ? cells[5].textContent : '').toLowerCase();
+                        const msg = (cells[6] ? cells[6].textContent : '').toLowerCase();
+                        textoParaBusca = (evento + ' ' + msg).trim();
+                    }
                     const valor = (filtro.opcao || '').toLowerCase().trim();
-                    if (filtro.operacao === 'igual' && valor && cellText !== valor) show = false;
-                    else if (filtro.operacao === 'contem' && valor && !cellText.includes(valor)) show = false;
-                    else if (filtro.operacao === 'diferente' && valor && cellText === valor) show = false;
-                    else if (filtro.operacao === 'vazio' && cellText !== '') show = false;
-                    else if (filtro.operacao === 'nao_vazio' && cellText === '') show = false;
+                    if (filtro.operacao === 'igual' && valor && textoParaBusca !== valor) show = false;
+                    else if (filtro.operacao === 'contem' && valor && !textoParaBusca.includes(valor)) show = false;
+                    else if (filtro.operacao === 'diferente' && valor && textoParaBusca === valor) show = false;
+                    else if (filtro.operacao === 'vazio' && textoParaBusca !== '') show = false;
+                    else if (filtro.operacao === 'nao_vazio' && textoParaBusca === '') show = false;
                 }
                 row.style.display = show ? '' : 'none';
             });
@@ -1835,7 +1947,6 @@ function executarBuscaAvancada() {
 
 function limparFiltros() {
     document.getElementById('filter-canal').value = '';
-    document.getElementById('filter-status').value = '';
     document.getElementById('filter-equipe').value = '';
     dpStartDate = null; dpEndDate = null; updateDateLabel();
     buscasAvancadas = [];
