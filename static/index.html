@@ -140,6 +140,62 @@
             50% { opacity: 0.4; }
         }
 
+        /* ========== DATE PICKER ========== */
+        .date-picker-wrapper { position: relative; }
+        .date-picker-btn {
+            padding: 9px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
+            font-size: 0.85rem; color: #334155; background: #fff; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; white-space: nowrap;
+            transition: border-color 0.2s, background 0.3s, color 0.3s;
+        }
+        .date-picker-btn:hover { border-color: #2563eb; }
+        .date-picker-btn svg { flex-shrink: 0; }
+        .date-picker-btn .clear-date { margin-left: 4px; opacity: 0.5; cursor: pointer; font-size: 1.1rem; }
+        .date-picker-btn .clear-date:hover { opacity: 1; }
+        .date-picker-dropdown {
+            display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 1000;
+            background: #0f172a; border: 1px solid #334155; border-radius: 14px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5); padding: 16px;
+            min-width: 560px; color: #e2e8f0;
+        }
+        .date-picker-dropdown.open { display: flex; gap: 0; }
+        .dp-presets {
+            display: flex; flex-direction: column; gap: 4px;
+            padding-right: 16px; border-right: 1px solid #334155; min-width: 130px;
+        }
+        .dp-presets button {
+            background: none; border: none; color: #94a3b8; padding: 8px 12px;
+            font-size: 0.85rem; cursor: pointer; border-radius: 6px; text-align: left;
+            transition: background 0.15s, color 0.15s;
+        }
+        .dp-presets button:hover, .dp-presets button.active { background: #1e293b; color: #f1f5f9; }
+        .dp-calendars { display: flex; gap: 16px; padding-left: 16px; }
+        .dp-calendar { width: 196px; }
+        .dp-cal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px; font-size: 0.82rem; font-weight: 600; color: #94a3b8;
+        }
+        .dp-cal-header button {
+            background: none; border: none; color: #64748b; cursor: pointer;
+            font-size: 1rem; padding: 2px 6px; border-radius: 4px;
+        }
+        .dp-cal-header button:hover { color: #f1f5f9; background: #1e293b; }
+        .dp-cal-grid {
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center;
+        }
+        .dp-cal-grid .dp-day-label { font-size: 0.7rem; color: #475569; padding: 4px 0; font-weight: 600; }
+        .dp-cal-grid .dp-day {
+            font-size: 0.8rem; padding: 5px 0; border-radius: 6px; cursor: pointer;
+            color: #cbd5e1; transition: background 0.1s;
+        }
+        .dp-cal-grid .dp-day:hover { background: #1e293b; color: #f1f5f9; }
+        .dp-cal-grid .dp-day.today { color: #fbbf24; font-weight: 700; }
+        .dp-cal-grid .dp-day.selected { background: #3b82f6; color: #fff; font-weight: 600; }
+        .dp-cal-grid .dp-day.in-range { background: #1e3a5f; color: #93c5fd; }
+        .dp-cal-grid .dp-day.other-month { color: #334155; }
+        .dp-cal-grid .dp-day.disabled { color: #1e293b; cursor: default; pointer-events: none; }
+        body.dark-mode .date-picker-btn { background: #0f172a; color: #e2e8f0; border-color: #334155; }
+
         /* ========== BARRA DE FILTROS ========== */
         .filter-bar {
             background: #fff;
@@ -673,6 +729,27 @@
 <!-- ==================== BARRA DE FILTROS ==================== -->
 <section class="filter-bar" id="filter-bar">
     <div class="filter-group">
+        <label>Período</label>
+        <div class="date-picker-wrapper" id="date-picker-wrapper">
+            <button type="button" class="date-picker-btn" id="date-picker-btn" onclick="toggleDatePicker()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span id="date-picker-label">Selecionar data</span>
+            </button>
+            <div class="date-picker-dropdown" id="date-picker-dropdown">
+                <div class="dp-presets">
+                    <button onclick="dpPreset('hoje')">Hoje</button>
+                    <button onclick="dpPreset('ontem')">Ontem</button>
+                    <button onclick="dpPreset('7dias')">Últimos 7 dias</button>
+                    <button onclick="dpPreset('30dias')">Últimos 30 dias</button>
+                </div>
+                <div class="dp-calendars">
+                    <div class="dp-calendar" id="dp-cal-left"></div>
+                    <div class="dp-calendar" id="dp-cal-right"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="filter-group">
         <label for="filter-canal">Canal</label>
         <select id="filter-canal">
             <option value="">Todos os Canais</option>
@@ -1025,11 +1102,14 @@ async function apiFetch(endpoint, params = {}) {
 }
 
 function getFiltros() {
-    return {
+    const f = {
         canal:  document.getElementById("filter-canal").value,
         status: document.getElementById("filter-status").value,
         equipe: document.getElementById("filter-equipe").value,
     };
+    if (dpStartDate) f.data_inicio = fmtDate(dpStartDate);
+    if (dpEndDate) f.data_fim = fmtDate(dpEndDate);
+    return f;
 }
 
 // ==============================================================
@@ -1421,6 +1501,123 @@ async function aplicarFiltros() {
 }
 
 // ==============================================================
+// DATE PICKER - Calendário duplo com presets
+// ==============================================================
+let dpStartDate = null, dpEndDate = null, dpSelecting = false;
+let dpLeftMonth, dpLeftYear, dpRightMonth, dpRightYear;
+
+(function initDP() {
+    const now = new Date();
+    dpLeftMonth = now.getMonth() - 1; dpLeftYear = now.getFullYear();
+    dpRightMonth = now.getMonth(); dpRightYear = now.getFullYear();
+    if (dpLeftMonth < 0) { dpLeftMonth = 11; dpLeftYear--; }
+})();
+
+function toggleDatePicker() {
+    const dd = document.getElementById('date-picker-dropdown');
+    dd.classList.toggle('open');
+    if (dd.classList.contains('open')) renderCalendars();
+}
+
+function closeDatePicker() {
+    document.getElementById('date-picker-dropdown').classList.remove('open');
+}
+
+function renderCalendars() {
+    renderCal('dp-cal-left', dpLeftYear, dpLeftMonth, '<', () => { dpLeftMonth--; if(dpLeftMonth<0){dpLeftMonth=11;dpLeftYear--;} syncRight(); renderCalendars(); });
+    renderCal('dp-cal-right', dpRightYear, dpRightMonth, '>', () => { dpRightMonth++; if(dpRightMonth>11){dpRightMonth=0;dpRightYear++;} syncLeft(); renderCalendars(); });
+}
+
+function syncRight() { dpRightMonth=dpLeftMonth+1; dpRightYear=dpLeftYear; if(dpRightMonth>11){dpRightMonth=0;dpRightYear++;} }
+function syncLeft() { dpLeftMonth=dpRightMonth-1; dpLeftYear=dpRightYear; if(dpLeftMonth<0){dpLeftMonth=11;dpLeftYear--;} }
+
+const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+function renderCal(containerId, year, month, navArrow, navAction) {
+    const c = document.getElementById(containerId);
+    const isLeft = containerId === 'dp-cal-left';
+    const header = `<div class="dp-cal-header">${isLeft ? `<button onclick="arguments[0].stopPropagation();(${navAction.toString().replace(/"/g,'&quot;')})()">‹</button>` : '<span></span>'}<span>${meses[month]} ${year}</span>${!isLeft ? `<button onclick="arguments[0].stopPropagation();(${navAction.toString().replace(/"/g,'&quot;')})()">›</button>` : '<span></span>'}</div>`;
+
+    const days = ['do','se','te','qu','qu','se','sá'];
+    let grid = '<div class="dp-cal-grid">';
+    days.forEach(d => grid += `<div class="dp-day-label">${d}</div>`);
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    for (let i = 0; i < firstDay; i++) {
+        const prevDate = new Date(year, month, -firstDay + i + 1);
+        grid += `<div class="dp-day other-month" data-date="${fmtDate(prevDate)}" onclick="dpSelectDay(this)">${prevDate.getDate()}</div>`;
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+        const dt = new Date(year, month, d);
+        let cls = 'dp-day';
+        if (dt.getTime() === today.getTime()) cls += ' today';
+        if (dpStartDate && dt.getTime() === dpStartDate.getTime()) cls += ' selected';
+        if (dpEndDate && dt.getTime() === dpEndDate.getTime()) cls += ' selected';
+        if (dpStartDate && dpEndDate && dt > dpStartDate && dt < dpEndDate) cls += ' in-range';
+        grid += `<div class="${cls}" data-date="${fmtDate(dt)}" onclick="dpSelectDay(this)">${d}</div>`;
+    }
+    grid += '</div>';
+    c.innerHTML = header + grid;
+}
+
+function fmtDate(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDateBR(d) { return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); }
+
+function dpSelectDay(el) {
+    const parts = el.dataset.date.split('-');
+    const dt = new Date(+parts[0], +parts[1]-1, +parts[2]);
+    if (!dpStartDate || (dpStartDate && dpEndDate)) {
+        dpStartDate = dt; dpEndDate = null;
+    } else {
+        if (dt < dpStartDate) { dpEndDate = dpStartDate; dpStartDate = dt; }
+        else { dpEndDate = dt; }
+        updateDateLabel();
+        closeDatePicker();
+        aplicarFiltros();
+    }
+    renderCalendars();
+}
+
+function dpPreset(tipo) {
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    if (tipo === 'hoje') { dpStartDate = new Date(hoje); dpEndDate = new Date(hoje); }
+    else if (tipo === 'ontem') { const o = new Date(hoje); o.setDate(o.getDate()-1); dpStartDate = o; dpEndDate = o; }
+    else if (tipo === '7dias') { const s = new Date(hoje); s.setDate(s.getDate()-6); dpStartDate = s; dpEndDate = new Date(hoje); }
+    else if (tipo === '30dias') { const s = new Date(hoje); s.setDate(s.getDate()-29); dpStartDate = s; dpEndDate = new Date(hoje); }
+    document.querySelectorAll('.dp-presets button').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    updateDateLabel();
+    closeDatePicker();
+    aplicarFiltros();
+}
+
+function updateDateLabel() {
+    const label = document.getElementById('date-picker-label');
+    if (dpStartDate && dpEndDate) {
+        if (dpStartDate.getTime() === dpEndDate.getTime()) label.textContent = fmtDateBR(dpStartDate);
+        else label.textContent = fmtDateBR(dpStartDate) + ' - ' + fmtDateBR(dpEndDate);
+        label.innerHTML += ' <span class="clear-date" onclick="event.stopPropagation();limparData()">✕</span>';
+    } else {
+        label.textContent = 'Selecionar data';
+    }
+}
+
+function limparData() {
+    dpStartDate = null; dpEndDate = null;
+    updateDateLabel();
+    aplicarFiltros();
+}
+
+// Close date picker on outside click
+document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('date-picker-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) closeDatePicker();
+});
+
+// ==============================================================
 // AÇÃO: EXPORTAR RELATÓRIO
 // ==============================================================
 async function exportarRelatorio() {
@@ -1432,6 +1629,8 @@ async function exportarRelatorio() {
         if (filtros.canal)  url.searchParams.set("canal", filtros.canal);
         if (filtros.status) url.searchParams.set("status", filtros.status);
         if (filtros.equipe) url.searchParams.set("equipe", filtros.equipe);
+        if (filtros.data_inicio) url.searchParams.set("data_inicio", filtros.data_inicio);
+        if (filtros.data_fim) url.searchParams.set("data_fim", filtros.data_fim);
         window.open(url.toString(), "_blank");
     } else {
         let dados = DADOS_SIMULADOS.eventosRecentes.filter(e => {
@@ -1638,6 +1837,7 @@ function limparFiltros() {
     document.getElementById('filter-canal').value = '';
     document.getElementById('filter-status').value = '';
     document.getElementById('filter-equipe').value = '';
+    dpStartDate = null; dpEndDate = null; updateDateLabel();
     buscasAvancadas = [];
     renderizarTagsFiltro();
     aplicarFiltros();
