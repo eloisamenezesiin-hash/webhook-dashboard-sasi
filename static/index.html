@@ -863,13 +863,8 @@
                 </select>
             </div>
             <div class="modal-field">
-                <label>Opção</label>
-                <select id="busca-opcao">
-                    <option value="">Selecione...</option>
-                    <option value="Conforme">Conforme</option>
-                    <option value="Não Conforme">Não Conforme</option>
-                    <option value="N/A">N/A</option>
-                </select>
+                <label>Valor</label>
+                <input type="text" id="busca-opcao" placeholder="Digite o valor para buscar..." style="width:100%;padding:8px 10px;border:1px solid #334155;border-radius:8px;background:#0f172a;color:#f1f5f9;font-size:0.92rem;">
             </div>
         </div>
 
@@ -1467,30 +1462,40 @@ async function exportarRelatorio() {
 // BUSCA AVANÇADA POR CAMPO (Modal)
 // ==============================================================
 const CAMPOS_POR_APP = {
+    Ronda: {
+        canais: ["RONDA PERIÓDICA", "RONDA DEDICADA", "Ronda Periódica e Base Alternativa", "Chegada no Local", "CHEGADA NO LOCAL", "Saída do Local", "SAÍDA DO LOCAL", "RESPALDO", "CHUVA", "INTERVALO", "DISPENSADO - CENTRAL"],
+        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
+        opcoes: ["sucesso", "erro", "pendente"]
+    },
+    "Ocorrências": {
+        canais: ["Ocorrência Real", "OCORRÊNCIA ABORTADA", "VANDALISMO E FURTO"],
+        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
+        opcoes: ["sucesso", "erro", "pendente"]
+    },
     Frota: {
-        canais: ["Carro", "Moto", "Caminhão", "Van"],
-        campos: ["Cartão Sodexo*", "CNH Motorista*", "CRLV Veículo*", "Checklist Veículo*", "Km Inicial*", "Km Final*", "Nível Combustível*", "Estado Pneus*", "Extintor*", "Triângulo*", "Macaco/Chave*", "Estepe*", "Documentos*", "Avarias Externas*", "Limpeza Interna*"],
-        opcoes: ["Conforme", "Não Conforme", "N/A", "Vencido", "OK", "Avariado"]
+        canais: ["CHECKLIST VEÍCULO", "ABASTECIMENTO", "OFICINA"],
+        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
+        opcoes: ["sucesso", "erro", "pendente"]
+    },
+    "Manutenção": {
+        canais: ["PROBLEMA TÉCNICO", "Melhorias", "Entrada - Alarme", "Entrada - CDA", "Entrada - CFTV", "Entrada - Elet.", "Entrada - Ref.", "Entrada - Sup. Técnica", "Saída - Alarme", "Saída - CDA", "Saída - CFTV", "Saída - Elet.", "Saída - Predial", "Saída - Ref.", "Saída - Sup. Técnica"],
+        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
+        opcoes: ["sucesso", "erro", "pendente"]
     },
     Portaria: {
-        canais: ["Entrada", "Saída", "Visitante", "Prestador"],
-        campos: ["Crachá*", "Documento Identidade*", "Autorização Acesso*", "Veículo Cadastrado*", "Biometria*", "Foto Capturada*", "Motivo Visita*", "Destino*", "Responsável*"],
-        opcoes: ["Conforme", "Não Conforme", "N/A", "Pendente", "Liberado", "Bloqueado"]
+        canais: ["CHAVE", "Checklist de Chaves", "PROBLEMAS COM CARTÃO", "Solicitação de Agente de Portaria", "Cadastramento"],
+        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
+        opcoes: ["sucesso", "erro", "pendente"]
     },
-    Ronda: {
-        canais: ["RONDA PERIÓDICA", "RONDA NOTURNA", "RONDA ESPECIAL"],
-        campos: ["Ponto de Ronda*", "QR Code Lido*", "Ocorrência Identificada*", "Foto Evidência*", "Iluminação*", "Cerca/Portão*", "Câmeras Funcionando*", "Área Limpa*"],
-        opcoes: ["Conforme", "Não Conforme", "N/A", "Atención"]
+    Almoxarifado: {
+        canais: ["Almoxarifado - Elet.", "Almoxarifado - Predial", "Almoxarifado - Ref.", "Devolução de Material - GAE", "Devolução de Material - MNT", "Devolução de Material - OFICINA", "Solicitação de Material - GAE", "Solicitação de Material - MNT", "Solicitação de Material - OFICINA"],
+        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
+        opcoes: ["sucesso", "erro", "pendente"]
     },
-    Ocorrencias: {
-        canais: ["RESPALDO", "Incidente", "Urgência"],
-        campos: ["Tipo Ocorrência*", "Gravidade*", "Local Exato*", "Testemunhas*", "Foto/Vídeo*", "Providências*", "Comunicado Polícia*", "Relatório Anexo*"],
-        opcoes: ["Registrado", "Em Andamento", "Resolvido", "Encaminhado", "Pendente"]
-    },
-    Manutencao: {
-        canais: ["OFICINA", "CHECKLIST VEÍCULO", "Preventiva", "Corretiva"],
-        campos: ["Ordem de Serviço*", "Tipo Manutenção*", "Peça Substituída*", "Mecânico Responsável*", "Prazo Entrega*", "Custo Estimado*", "Status Aprovação*", "Garantia*"],
-        opcoes: ["Conforme", "Não Conforme", "Aprovado", "Reprovado", "Aguardando Peça", "Concluído"]
+    "Gestão": {
+        canais: ["GESTÃO ADM", "Entrega de Imagens", "Solicitação Supervisor de Análise", "Suporte IIN", "Visita"],
+        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
+        opcoes: ["sucesso", "erro", "pendente"]
     }
 };
 
@@ -1506,11 +1511,11 @@ function atualizarCamposBusca() {
     const app = document.getElementById('busca-app').value;
     const canalSelect = document.getElementById('busca-canal');
     const campoSelect = document.getElementById('busca-campo');
-    const opcaoSelect = document.getElementById('busca-opcao');
+    const opcaoInput = document.getElementById('busca-opcao');
 
-    canalSelect.innerHTML = '<option value="">Selecione...</option>';
+    canalSelect.innerHTML = '<option value="">Todos os canais</option>';
     campoSelect.innerHTML = '<option value="">Selecione...</option>';
-    opcaoSelect.innerHTML = '<option value="">Selecione...</option>';
+    opcaoInput.value = '';
 
     if (app && CAMPOS_POR_APP[app]) {
         const config = CAMPOS_POR_APP[app];
@@ -1519,9 +1524,6 @@ function atualizarCamposBusca() {
         });
         config.campos.forEach(c => {
             campoSelect.innerHTML += `<option value="${c}">${c}</option>`;
-        });
-        config.opcoes.forEach(o => {
-            opcaoSelect.innerHTML += `<option value="${o}">${o}</option>`;
         });
     }
 }
@@ -1543,9 +1545,9 @@ function adicionarFiltroBusca() {
     buscasAvancadas.push({ app, canal, campo, operacao, opcao });
     renderizarTagsFiltro();
 
-    // Reset campo e opção for next filter
+    // Reset campo e valor for next filter
     document.getElementById('busca-campo').value = '';
-    document.getElementById('busca-opcao').value = '';
+    document.getElementById('busca-opcao').value = '';  // input text
 }
 
 function renderizarTagsFiltro() {
@@ -1566,7 +1568,7 @@ function limparBuscaAvancada() {
     document.getElementById('busca-app').value = '';
     document.getElementById('busca-canal').innerHTML = '<option value="">Selecione...</option>';
     document.getElementById('busca-campo').innerHTML = '<option value="">Selecione o aplicativo primeiro</option>';
-    document.getElementById('busca-opcao').innerHTML = '<option value="">Selecione...</option>';
+    document.getElementById('busca-opcao').value = '';
     document.getElementById('busca-operacao').value = 'igual';
     buscasAvancadas = [];
     renderizarTagsFiltro();
@@ -1584,26 +1586,40 @@ function executarBuscaAvancada() {
 
     // Apply the advanced filters to the table
     if (buscasAvancadas.length > 0) {
-        // Set the equipe filter to the first app's matching equipe if possible
-        const firstApp = buscasAvancadas[0].app;
-        const equipeSelect = document.getElementById('filter-equipe');
-        // Try to match app name with an equipe
-        for (let opt of equipeSelect.options) {
-            if (opt.value.toLowerCase().includes(firstApp.toLowerCase())) {
-                equipeSelect.value = opt.value;
-                break;
-            }
-        }
-        // Set canal filter if available
+        // Set canal filter if a specific canal was selected
         const firstCanal = buscasAvancadas[0].canal;
         if (firstCanal) {
             const canalSelect = document.getElementById('filter-canal');
             for (let opt of canalSelect.options) {
-                if (opt.value === firstCanal || opt.value.includes(firstCanal)) {
+                if (opt.value === firstCanal) {
                     canalSelect.value = opt.value;
                     break;
                 }
             }
+        }
+
+        // Apply text-based filtering on table rows
+        const campoMap = { 'Canal': 2, 'Equipe': 3, 'Usuário': 4, 'Status': 0, 'Mensagem': 6, 'Evento': 6 };
+        const tbody = document.querySelector('#tabela-eventos tbody');
+        if (tbody) {
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length === 0) return;
+                let show = true;
+                for (const filtro of buscasAvancadas) {
+                    const colIdx = campoMap[filtro.campo];
+                    if (colIdx === undefined) continue;
+                    const cellText = (cells[colIdx] ? cells[colIdx].textContent : '').toLowerCase().trim();
+                    const valor = (filtro.opcao || '').toLowerCase().trim();
+                    if (filtro.operacao === 'igual' && valor && cellText !== valor) show = false;
+                    else if (filtro.operacao === 'contem' && valor && !cellText.includes(valor)) show = false;
+                    else if (filtro.operacao === 'diferente' && valor && cellText === valor) show = false;
+                    else if (filtro.operacao === 'vazio' && cellText !== '') show = false;
+                    else if (filtro.operacao === 'nao_vazio' && cellText === '') show = false;
+                }
+                row.style.display = show ? '' : 'none';
+            });
         }
     }
 
