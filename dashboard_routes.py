@@ -535,8 +535,8 @@ def api_manutencao_stats():
             "Manutenção - Superv. Tec.",
             "Manutenção - Terceirizados",
         ]
-        eq_filter = "equipe = %s" if equipe else "equipe = ANY(%s)"
-        eq_param = equipe if equipe else equipes_mnt
+        eq_filter = "equipe = %s" if equipe else "equipe IN %s"
+        eq_param = equipe if equipe else tuple(equipes_mnt)
 
         base_where = [eq_filter]
         base_params = [eq_param]
@@ -607,8 +607,8 @@ def api_manutencao_por_tecnico():
             "Manutenção - Técnicos",
             "Manutenção Emergencial - Técnicos",
         ]
-        eq_filter = "equipe = %s" if equipe else "equipe = ANY(%s)"
-        eq_param = equipe if equipe else equipes_mnt
+        eq_filter = "equipe = %s" if equipe else "equipe IN %s"
+        eq_param = equipe if equipe else tuple(equipes_mnt)
 
         base_where = [eq_filter, "comunicante IS NOT NULL", "comunicante != ''"]
         base_params = [eq_param]
@@ -667,8 +667,8 @@ def api_manutencao_por_cliente():
             "Manutenção - Técnicos",
             "Manutenção Emergencial - Técnicos",
         ]
-        eq_filter = "equipe = %s" if equipe else "equipe = ANY(%s)"
-        eq_param = equipe if equipe else equipes_mnt
+        eq_filter = "equipe = %s" if equipe else "equipe IN %s"
+        eq_param = equipe if equipe else tuple(equipes_mnt)
 
         base_where = [
             eq_filter,
@@ -722,8 +722,8 @@ def api_manutencao_por_canal():
             "Manutenção - Técnicos",
             "Manutenção Emergencial - Técnicos",
         ]
-        eq_filter = "equipe = %s" if equipe else "equipe = ANY(%s)"
-        eq_param = equipe if equipe else equipes_mnt
+        eq_filter = "equipe = %s" if equipe else "equipe IN %s"
+        eq_param = equipe if equipe else tuple(equipes_mnt)
 
         base_where = [
             eq_filter,
@@ -764,8 +764,8 @@ def api_manutencao_por_mes():
             "Manutenção - Técnicos",
             "Manutenção Emergencial - Técnicos",
         ]
-        eq_filter = "equipe = %s" if equipe else "equipe = ANY(%s)"
-        eq_param = equipe if equipe else equipes_mnt
+        eq_filter = "equipe = %s" if equipe else "equipe IN %s"
+        eq_param = equipe if equipe else tuple(equipes_mnt)
 
         base_where = [
             eq_filter,
