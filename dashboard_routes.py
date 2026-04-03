@@ -33,6 +33,15 @@ def _add_date_filter(where, params):
         params.append(data_fim)
 
 
+def _mnt_equipe_filter(equipe, equipes_default):
+    """Retorna (where_clause, params_list) para filtro de equipe Manutenção."""
+    if equipe:
+        return "equipe = %s", [equipe]
+    else:
+        ph = ", ".join(["%s"] * len(equipes_default))
+        return f"equipe IN ({ph})", list(equipes_default)
+
+
 # ================================================================
 # Servir o dashboard HTML em /painel
 # ================================================================
@@ -535,11 +544,10 @@ def api_manutencao_stats():
             "Manutenção - Superv. Tec.",
             "Manutenção - Terceirizados",
         ]
-        eq_filter = "equipe = %s" if equipe else "equipe IN %s"
-        eq_param = equipe if equipe else tuple(equipes_mnt)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, equipes_mnt)
 
-        base_where = [eq_filter]
-        base_params = [eq_param]
+        base_where = [eq_clause]
+        base_params = list(eq_params)
         _add_date_filter(base_where, base_params)
         w = " WHERE " + " AND ".join(base_where)
 
@@ -607,11 +615,10 @@ def api_manutencao_por_tecnico():
             "Manutenção - Técnicos",
             "Manutenção Emergencial - Técnicos",
         ]
-        eq_filter = "equipe = %s" if equipe else "equipe IN %s"
-        eq_param = equipe if equipe else tuple(equipes_mnt)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, equipes_mnt)
 
-        base_where = [eq_filter, "comunicante IS NOT NULL", "comunicante != ''"]
-        base_params = [eq_param]
+        base_where = [eq_clause, "comunicante IS NOT NULL", "comunicante != ''"]
+        base_params = list(eq_params)
         _add_date_filter(base_where, base_params)
         w = " WHERE " + " AND ".join(base_where)
 
@@ -667,14 +674,13 @@ def api_manutencao_por_cliente():
             "Manutenção - Técnicos",
             "Manutenção Emergencial - Técnicos",
         ]
-        eq_filter = "equipe = %s" if equipe else "equipe IN %s"
-        eq_param = equipe if equipe else tuple(equipes_mnt)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, equipes_mnt)
 
         base_where = [
-            eq_filter,
+            eq_clause,
             "(canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')",
         ]
-        base_params = [eq_param]
+        base_params = list(eq_params)
         _add_date_filter(base_where, base_params)
         w = " WHERE " + " AND ".join(base_where)
 
@@ -722,15 +728,14 @@ def api_manutencao_por_canal():
             "Manutenção - Técnicos",
             "Manutenção Emergencial - Técnicos",
         ]
-        eq_filter = "equipe = %s" if equipe else "equipe IN %s"
-        eq_param = equipe if equipe else tuple(equipes_mnt)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, equipes_mnt)
 
         base_where = [
-            eq_filter,
+            eq_clause,
             "(canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')",
             "canal IS NOT NULL",
         ]
-        base_params = [eq_param]
+        base_params = list(eq_params)
         _add_date_filter(base_where, base_params)
         w = " WHERE " + " AND ".join(base_where)
 
@@ -764,14 +769,13 @@ def api_manutencao_por_mes():
             "Manutenção - Técnicos",
             "Manutenção Emergencial - Técnicos",
         ]
-        eq_filter = "equipe = %s" if equipe else "equipe IN %s"
-        eq_param = equipe if equipe else tuple(equipes_mnt)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, equipes_mnt)
 
         base_where = [
-            eq_filter,
+            eq_clause,
             "(canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')",
         ]
-        base_params = [eq_param]
+        base_params = list(eq_params)
         _add_date_filter(base_where, base_params)
         w = " WHERE " + " AND ".join(base_where)
 
