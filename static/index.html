@@ -1258,19 +1258,18 @@ function scrollToSection(id) {
 // ==============================================================
 let mntCarregado = false;
 function trocarView(view) {
+    console.log("[MNT] trocarView chamado:", view);
     document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
 
     if (view === 'manutencao') {
         document.getElementById('view-manutencao').classList.add('active');
         document.getElementById('btn-manutencao').classList.add('active');
-        if (!mntCarregado) {
-            mntCarregarTudo();
-            mntCarregado = true;
-        }
+        // Sempre recarregar ao trocar para manutenção
+        mntCarregarTudo();
+        mntCarregado = true;
     } else {
         document.getElementById('view-geral').classList.add('active');
-        // Reativar o primeiro botão
         document.querySelector('.sidebar-nav .sidebar-btn').classList.add('active');
     }
 }
@@ -1308,21 +1307,41 @@ function mntAnimarKPI(id, valor) {
 }
 
 async function mntCarregarStats() {
+    const url = API_BASE + "/api/manutencao/stats" + mntGetParams();
+    console.log("[MNT] Carregando stats:", url);
+    // Mostrar loading
+    ["mnt-kpi-total","mnt-kpi-entrada","mnt-kpi-saida","mnt-kpi-pendentes","mnt-kpi-concluidas"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = "...";
+    });
     try {
-        const r = await fetch(API_BASE + "/api/manutencao/stats" + mntGetParams());
+        const r = await fetch(url);
+        console.log("[MNT] Stats response status:", r.status);
+        if (!r.ok) throw new Error("HTTP " + r.status);
         const d = await r.json();
+        console.log("[MNT] Stats data:", JSON.stringify(d));
         mntAnimarKPI("mnt-kpi-total", d.total_alertas || 0);
         mntAnimarKPI("mnt-kpi-entrada", d.total_entrada || 0);
         mntAnimarKPI("mnt-kpi-saida", d.total_saida || 0);
         mntAnimarKPI("mnt-kpi-pendentes", d.os_pendentes || 0);
         mntAnimarKPI("mnt-kpi-concluidas", d.os_concluidas || 0);
-    } catch(e) { console.error("MNT Stats:", e); }
+    } catch(e) {
+        console.error("[MNT] Stats ERRO:", e);
+        ["mnt-kpi-total","mnt-kpi-entrada","mnt-kpi-saida","mnt-kpi-pendentes","mnt-kpi-concluidas"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = "!";
+        });
+    }
 }
 
 async function mntCarregarCanais() {
     try {
-        const r = await fetch(API_BASE + "/api/manutencao/por-canal" + mntGetParams());
+        const url = API_BASE + "/api/manutencao/por-canal" + mntGetParams();
+        console.log("[MNT] Carregando canais:", url);
+        const r = await fetch(url);
+        if (!r.ok) throw new Error("HTTP " + r.status);
         const d = await r.json();
+        console.log("[MNT] Canais data:", JSON.stringify(d).substring(0,200));
         const canais = d.canais || [];
         const labels = canais.map(c => c.nome.replace(/Sa[ií]da - /g,""));
         const valores = canais.map(c => c.total);
@@ -1343,8 +1362,12 @@ async function mntCarregarCanais() {
 
 async function mntCarregarTecnicos() {
     try {
-        const r = await fetch(API_BASE + "/api/manutencao/por-tecnico" + mntGetParams());
+        const url = API_BASE + "/api/manutencao/por-tecnico" + mntGetParams();
+        console.log("[MNT] Carregando tecnicos:", url);
+        const r = await fetch(url);
+        if (!r.ok) throw new Error("HTTP " + r.status);
         const d = await r.json();
+        console.log("[MNT] Tecnicos data:", JSON.stringify(d).substring(0,200));
         const tecs = (d.tecnicos || []).slice(0, 15);
         const labels = tecs.map(t => t.nome);
         const entradas = tecs.map(t => t.entradas);
@@ -1368,8 +1391,12 @@ async function mntCarregarTecnicos() {
 
 async function mntCarregarClientes() {
     try {
-        const r = await fetch(API_BASE + "/api/manutencao/por-cliente" + mntGetParams());
+        const url = API_BASE + "/api/manutencao/por-cliente" + mntGetParams();
+        console.log("[MNT] Carregando clientes:", url);
+        const r = await fetch(url);
+        if (!r.ok) throw new Error("HTTP " + r.status);
         const d = await r.json();
+        console.log("[MNT] Clientes data:", JSON.stringify(d).substring(0,200));
         const sites = (d.por_site || []).slice(0, 12);
         const codigos = (d.por_codigo || []).slice(0, 12);
         const dados = sites.length > 0 ? sites : codigos.map(c => ({nome: c.codigo, total: c.total}));
@@ -1392,8 +1419,12 @@ async function mntCarregarClientes() {
 
 async function mntCarregarMeses() {
     try {
-        const r = await fetch(API_BASE + "/api/manutencao/por-mes" + mntGetParams());
+        const url = API_BASE + "/api/manutencao/por-mes" + mntGetParams();
+        console.log("[MNT] Carregando meses:", url);
+        const r = await fetch(url);
+        if (!r.ok) throw new Error("HTTP " + r.status);
         const d = await r.json();
+        console.log("[MNT] Meses data:", JSON.stringify(d).substring(0,200));
         const dados = d.dados || [];
         const labels = dados.map(m => m.label);
         const valores = dados.map(m => m.total);
@@ -1412,6 +1443,8 @@ async function mntCarregarMeses() {
 }
 
 async function mntCarregarTudo() {
+    console.log("[MNT] ========= mntCarregarTudo INICIADO =========");
+    console.log("[MNT] API_BASE =", API_BASE);
     try {
         await Promise.all([
             mntCarregarStats(),
@@ -1420,7 +1453,8 @@ async function mntCarregarTudo() {
             mntCarregarClientes(),
             mntCarregarMeses(),
         ]);
-    } catch(e) { console.error("MNT Load:", e); }
+        console.log("[MNT] ========= mntCarregarTudo COMPLETO =========");
+    } catch(e) { console.error("[MNT] mntCarregarTudo ERRO:", e); }
 }
 
 // ==============================================================
