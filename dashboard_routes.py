@@ -21,6 +21,18 @@ def _get_conn():
     return psycopg2.connect(DATABASE_URL)
 
 
+def _add_date_filter(where, params):
+    """Adiciona filtro de data_inicio e data_fim se presentes na query string."""
+    data_inicio = request.args.get("data_inicio")
+    data_fim = request.args.get("data_fim")
+    if data_inicio:
+        where.append("data >= %s::date")
+        params.append(data_inicio)
+    if data_fim:
+        where.append("data < (%s::date + INTERVAL '1 day')")
+        params.append(data_fim)
+
+
 # ================================================================
 # Servir o dashboard HTML em /painel
 # ================================================================
@@ -49,6 +61,7 @@ def api_stats():
         if equipe:
             where.append("equipe = %s")
             params.append(equipe)
+        _add_date_filter(where, params)
         w = (" WHERE " + " AND ".join(where)) if where else ""
 
         cur.execute("SELECT COUNT(*) FROM registros" + w, params)
@@ -101,14 +114,15 @@ def api_por_canal():
     try:
         conn = _get_conn()
         cur = conn.cursor()
-        w = ""
+        where = ["canal IS NOT NULL"]
         params = []
         if equipe:
-            w = " AND equipe = %s"
+            where.append("equipe = %s")
             params.append(equipe)
+        _add_date_filter(where, params)
+        w = " WHERE " + " AND ".join(where)
         cur.execute(
-            "SELECT canal, COUNT(*) as total FROM registros "
-            "WHERE canal IS NOT NULL" + w +
+            "SELECT canal, COUNT(*) as total FROM registros" + w +
             " GROUP BY canal ORDER BY total DESC",
             params
         )
@@ -148,14 +162,15 @@ def api_por_equipe():
     try:
         conn = _get_conn()
         cur = conn.cursor()
-        w = ""
+        where = ["equipe IS NOT NULL"]
         params = []
         if canal:
-            w = " AND canal = %s"
+            where.append("canal = %s")
             params.append(canal)
+        _add_date_filter(where, params)
+        w = " WHERE " + " AND ".join(where)
         cur.execute(
-            "SELECT equipe, COUNT(*) as total FROM registros "
-            "WHERE equipe IS NOT NULL" + w +
+            "SELECT equipe, COUNT(*) as total FROM registros" + w +
             " GROUP BY equipe ORDER BY total DESC LIMIT 20",
             params
         )
@@ -169,6 +184,8 @@ def api_por_equipe():
         return jsonify({"equipes": equipes})
     except Exception as e:
         return jsonify({"equipes": {}, "erro": str(e)})
+
+
 # ================================================================
 # 4. /api/dashboard/por-hora - Grafico de linha (24h)
 # ================================================================
@@ -187,6 +204,7 @@ def api_por_hora():
         if equipe:
             where.append("equipe = %s")
             params.append(equipe)
+        _add_date_filter(where, params)
         w = " WHERE " + " AND ".join(where)
         cur.execute(
             "SELECT EXTRACT(HOUR FROM data) as hora, COUNT(*) as total "
@@ -223,6 +241,7 @@ def api_por_dia():
         if equipe:
             where.append("equipe = %s")
             params.append(equipe)
+        _add_date_filter(where, params)
         w = " WHERE " + " AND ".join(where)
         cur.execute(
             "SELECT data::date as dia, COUNT(*) as total "
@@ -262,6 +281,7 @@ def api_eventos_recentes():
         if equipe:
             where.append("equipe = %s")
             params.append(equipe)
+        _add_date_filter(where, params)
         w = (" WHERE " + " AND ".join(where)) if where else ""
         params.append(int(limite))
         cur.execute(
@@ -386,6 +406,7 @@ def api_exportar():
         if equipe:
             where.append("equipe = %s")
             params.append(equipe)
+        _add_date_filter(where, params)
         w = (" WHERE " + " AND ".join(where)) if where else ""
         cur.execute(
             "SELECT data, canal, tipo, equipe, site_nome, mensagem "
@@ -424,7 +445,7 @@ def api_exportar():
 # ================================================================
 @dashboard_bp.route("/api/debug/raw-sample")
 def api_debug_raw():
-    """Retorna amostras do raw_json da tabela webhook_logs para anÃ¡lise."""
+    """Retorna amostras do raw_json da tabela webhook_logs para análise."""
     try:
         conn = _get_conn()
         cur = conn.cursor()
@@ -459,7 +480,7 @@ def api_debug_raw():
 # ================================================================
 @dashboard_bp.route("/health")
 def health_check():
-    """Endpoint de health check. Testa conexÃ£o com o banco."""
+    """Endpoint de health check. Testa conexão com o banco."""
     try:
         conn = _get_conn()
         cur = conn.cursor()
