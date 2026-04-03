@@ -285,7 +285,7 @@ def api_eventos_recentes():
         w = (" WHERE " + " AND ".join(where)) if where else ""
         params.append(int(limite))
         cur.execute(
-            "SELECT data, canal, tipo, equipe, site_nome, mensagem "
+            "SELECT data, canal, tipo, equipe, site_nome, mensagem, comunicante "
             "FROM registros" + w +
             " ORDER BY data DESC LIMIT %s",
             params
@@ -295,7 +295,7 @@ def api_eventos_recentes():
         conn.close()
 
         eventos = []
-        for data, cn, tipo, eq, site, msg in rows:
+        for data, cn, tipo, eq, site, msg, comunicante in rows:
             eventos.append({
                 "data": data.strftime("%d/%m/%Y %H:%M:%S") if data else "",
                 "canal": cn or "",
@@ -303,6 +303,7 @@ def api_eventos_recentes():
                 "mensagem": msg or "",
                 "equipe": eq or "",
                 "usuario": site or "",
+                "comunicante": comunicante or "",
                 "status": "sucesso",
             })
         return jsonify({"eventos": eventos, "total": len(eventos)})
@@ -449,30 +450,356 @@ def api_debug_raw():
     try:
         conn = _get_conn()
         cur = conn.cursor()
+        # Descobrir colunas da tabela webhook_logs
         cur.execute(
-            "SELECT id, raw_json, created_at FROM webhook_logs "
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'webhook_logs' ORDER BY ordinal_position"
+        )
+        cols_wl = [r[0] for r in cur.fetchall()]
+
+        # Descobrir colunas da tabela registros
+        cur.execute(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'registros' ORDER BY ordinal_position"
+        )
+        cols_reg = [r[0] for r in cur.fetchall()]
+
+        # Buscar amostras do raw_json
+        cur.execute(
+            "SELECT id, raw_json FROM webhook_logs "
             "ORDER BY id DESC LIMIT 3"
         )
         rows = cur.fetchall()
+
+        # Buscar amostras de registros com comunicante (Saída)
+        cur.execute(
+            "SELECT data, canal, tipo, equipe, site_nome, mensagem, comunicante "
+            "FROM registros WHERE canal LIKE 'Saída%' OR canal LIKE 'Sa_da%' "
+            "ORDER BY data DESC LIMIT 5"
+        )
+        reg_rows = cur.fetchall()
+
         cur.close()
         conn.close()
 
         samples = []
-        for row_id, raw, created in rows:
+        for row_id, raw in rows:
             try:
                 parsed = json.loads(raw) if isinstance(raw, str) else raw
             except Exception:
                 parsed = {"_raw_text": str(raw)[:500]}
             samples.append({
                 "id": row_id,
-                "created_at": str(created) if created else "",
                 "keys_nivel_1": list(parsed.keys()) if isinstance(parsed, dict) else [],
                 "keys_data": list(parsed.get("data", {}).keys()) if isinstance(parsed, dict) and isinstance(parsed.get("data"), dict) else [],
                 "raw_json": parsed,
             })
-        return jsonify({"total_samples": len(samples), "samples": samples})
+
+        registros_sample = []
+        for dt, cn, tp, eq, sn, msg, com in reg_rows:
+            registros_sample.append({
+                "data": dt.strftime("%d/%m/%Y %H:%M:%S") if dt else "",
+                "canal": cn or "",
+                "tipo": tp or "",
+                "equipe": eq or "",
+                "site_nome": sn or "",
+                "mensagem": msg or "",
+                "comunicante": com or "",
+            })
+
+        return jsonify({
+            "colunas_webhook_logs": cols_wl,
+            "colunas_registros": cols_reg,
+            "total_samples": len(samples),
+            "samples": samples,
+            "registros_saida_sample": registros_sample,
+        })
     except Exception as e:
         return jsonify({"erro": str(e)})
+
+
+# ================================================================
+# 10. /api/manutencao/stats - KPIs do Dashboard Manutenção (Saída)
+# ================================================================
+@dashboard_bp.route("/api/manutencao/stats")
+def api_manutencao_stats():
+    """KPIs focados em Manutenção: total saída, por técnico, por status."""
+    equipe = request.args.get("equipe")
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        equipes_mnt = [
+            "Manutenção - Técnicos",
+            "Manutenção Emergencial - Técnicos",
+            "Manutenção - Superv. Tec.",
+            "Manutenção - Terceirizados",
+        ]
+        eq_filter = "equipe = %s" if equipe else "equipe = ANY(%s)"
+        eq_param = equipe if equipe else equipes_mnt
+
+        base_where = [eq_filter]
+        base_params = [eq_param]
+        _add_date_filter(base_where, base_params)
+        w = " WHERE " + " AND ".join(base_where)
+
+        # Total alertas
+        cur.execute("SELECT COUNT(*) FROM registros" + w, base_params)
+        total = cur.fetchone()[0]
+
+        # Total saída
+        ws = w + " AND (canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')"
+        cur.execute("SELECT COUNT(*) FROM registros" + ws, base_params)
+        total_saida = cur.fetchone()[0]
+
+        # Total entrada
+        we = w + " AND canal LIKE 'Entrada%'"
+        cur.execute("SELECT COUNT(*) FROM registros" + we, base_params)
+        total_entrada = cur.fetchone()[0]
+
+        # Tentar contar OS por status via mensagem (busca 'Conclu' e 'pendência')
+        wc = w + " AND (canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')"
+        cur.execute(
+            "SELECT mensagem FROM registros" + wc +
+            " AND mensagem IS NOT NULL",
+            base_params
+        )
+        msgs = cur.fetchall()
+        os_concluidas = 0
+        os_pendentes = 0
+        for (msg,) in msgs:
+            ml = (msg or "").lower()
+            if "conclu" in ml:
+                os_concluidas += 1
+            if "pendên" in ml or "penden" in ml or "pendenc" in ml:
+                os_pendentes += 1
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "total_alertas": total,
+            "total_saida": total_saida,
+            "total_entrada": total_entrada,
+            "os_concluidas": os_concluidas,
+            "os_pendentes": os_pendentes,
+        })
+    except Exception as e:
+        return jsonify({
+            "erro": str(e),
+            "total_alertas": 0, "total_saida": 0,
+            "total_entrada": 0, "os_concluidas": 0, "os_pendentes": 0,
+        })
+
+
+# ================================================================
+# 11. /api/manutencao/por-tecnico - Saída agrupada por comunicante
+# ================================================================
+@dashboard_bp.route("/api/manutencao/por-tecnico")
+def api_manutencao_por_tecnico():
+    """Agrupa entradas e saídas por comunicante (técnico)."""
+    equipe = request.args.get("equipe")
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        equipes_mnt = [
+            "Manutenção - Técnicos",
+            "Manutenção Emergencial - Técnicos",
+        ]
+        eq_filter = "equipe = %s" if equipe else "equipe = ANY(%s)"
+        eq_param = equipe if equipe else equipes_mnt
+
+        base_where = [eq_filter, "comunicante IS NOT NULL", "comunicante != ''"]
+        base_params = [eq_param]
+        _add_date_filter(base_where, base_params)
+        w = " WHERE " + " AND ".join(base_where)
+
+        # Saídas por técnico
+        ws = w + " AND (canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')"
+        cur.execute(
+            "SELECT comunicante, COUNT(*) as total FROM registros" + ws +
+            " GROUP BY comunicante ORDER BY total DESC LIMIT 20",
+            base_params
+        )
+        saidas = {r[0]: r[1] for r in cur.fetchall()}
+
+        # Entradas por técnico
+        we = w + " AND canal LIKE 'Entrada%'"
+        cur.execute(
+            "SELECT comunicante, COUNT(*) as total FROM registros" + we +
+            " GROUP BY comunicante ORDER BY total DESC LIMIT 20",
+            base_params
+        )
+        entradas = {r[0]: r[1] for r in cur.fetchall()}
+
+        cur.close()
+        conn.close()
+
+        # Combinar todos os técnicos
+        todos = set(list(saidas.keys()) + list(entradas.keys()))
+        tecnicos = []
+        for nome in todos:
+            tecnicos.append({
+                "nome": nome,
+                "entradas": entradas.get(nome, 0),
+                "saidas": saidas.get(nome, 0),
+            })
+        tecnicos.sort(key=lambda x: x["saidas"] + x["entradas"], reverse=True)
+
+        return jsonify({"tecnicos": tecnicos[:20]})
+    except Exception as e:
+        return jsonify({"tecnicos": [], "erro": str(e)})
+
+
+# ================================================================
+# 12. /api/manutencao/por-cliente - Saídas agrupadas por site/unidade
+# ================================================================
+@dashboard_bp.route("/api/manutencao/por-cliente")
+def api_manutencao_por_cliente():
+    """Agrupa saídas por site_nome (cliente/unidade)."""
+    equipe = request.args.get("equipe")
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        equipes_mnt = [
+            "Manutenção - Técnicos",
+            "Manutenção Emergencial - Técnicos",
+        ]
+        eq_filter = "equipe = %s" if equipe else "equipe = ANY(%s)"
+        eq_param = equipe if equipe else equipes_mnt
+
+        base_where = [
+            eq_filter,
+            "(canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')",
+        ]
+        base_params = [eq_param]
+        _add_date_filter(base_where, base_params)
+        w = " WHERE " + " AND ".join(base_where)
+
+        # Por site_nome
+        cur.execute(
+            "SELECT site_nome, COUNT(*) as total FROM registros" + w +
+            " AND site_nome IS NOT NULL AND site_nome != ''"
+            " GROUP BY site_nome ORDER BY total DESC LIMIT 15",
+            base_params
+        )
+        por_site = [{"nome": r[0], "total": r[1]} for r in cur.fetchall()]
+
+        # Por código @@NNN extraído da mensagem
+        cur.execute(
+            "SELECT "
+            "  SUBSTRING(mensagem FROM '@@[0-9]+') as cod_unidade, "
+            "  COUNT(*) as total "
+            "FROM registros" + w +
+            " AND mensagem ~ '@@[0-9]+'"
+            " GROUP BY cod_unidade ORDER BY total DESC LIMIT 15",
+            base_params
+        )
+        por_codigo = [{"codigo": r[0], "total": r[1]} for r in cur.fetchall()]
+
+        cur.close()
+        conn.close()
+
+        return jsonify({"por_site": por_site, "por_codigo": por_codigo})
+    except Exception as e:
+        return jsonify({"por_site": [], "por_codigo": [], "erro": str(e)})
+
+
+# ================================================================
+# 13. /api/manutencao/por-canal - Saídas agrupadas por canal
+# ================================================================
+@dashboard_bp.route("/api/manutencao/por-canal")
+def api_manutencao_por_canal():
+    """Serviços por canal de saída."""
+    equipe = request.args.get("equipe")
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        equipes_mnt = [
+            "Manutenção - Técnicos",
+            "Manutenção Emergencial - Técnicos",
+        ]
+        eq_filter = "equipe = %s" if equipe else "equipe = ANY(%s)"
+        eq_param = equipe if equipe else equipes_mnt
+
+        base_where = [
+            eq_filter,
+            "(canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')",
+            "canal IS NOT NULL",
+        ]
+        base_params = [eq_param]
+        _add_date_filter(base_where, base_params)
+        w = " WHERE " + " AND ".join(base_where)
+
+        cur.execute(
+            "SELECT canal, COUNT(*) as total FROM registros" + w +
+            " GROUP BY canal ORDER BY total DESC",
+            base_params
+        )
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        canais = [{"nome": r[0], "total": r[1]} for r in rows]
+        return jsonify({"canais": canais})
+    except Exception as e:
+        return jsonify({"canais": [], "erro": str(e)})
+
+
+# ================================================================
+# 14. /api/manutencao/por-mes - Serviços por mês
+# ================================================================
+@dashboard_bp.route("/api/manutencao/por-mes")
+def api_manutencao_por_mes():
+    """Serviços de saída agrupados por mês."""
+    equipe = request.args.get("equipe")
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        equipes_mnt = [
+            "Manutenção - Técnicos",
+            "Manutenção Emergencial - Técnicos",
+        ]
+        eq_filter = "equipe = %s" if equipe else "equipe = ANY(%s)"
+        eq_param = equipe if equipe else equipes_mnt
+
+        base_where = [
+            eq_filter,
+            "(canal LIKE 'Saída%' OR canal LIKE 'Sa_da%')",
+        ]
+        base_params = [eq_param]
+        _add_date_filter(base_where, base_params)
+        w = " WHERE " + " AND ".join(base_where)
+
+        cur.execute(
+            "SELECT TO_CHAR(data, 'YYYY-MM') as mes, COUNT(*) as total "
+            "FROM registros" + w +
+            " AND data IS NOT NULL"
+            " GROUP BY mes ORDER BY mes DESC LIMIT 12",
+            base_params
+        )
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        meses_pt = {
+            "01": "Jan", "02": "Fev", "03": "Mar", "04": "Abr",
+            "05": "Mai", "06": "Jun", "07": "Jul", "08": "Ago",
+            "09": "Set", "10": "Out", "11": "Nov", "12": "Dez",
+        }
+        dados = []
+        for mes_str, total in reversed(rows):
+            partes = mes_str.split("-")
+            label = meses_pt.get(partes[1], partes[1]) + "/" + partes[0][2:]
+            dados.append({"mes": mes_str, "label": label, "total": total})
+
+        return jsonify({"dados": dados})
+    except Exception as e:
+        return jsonify({"dados": [], "erro": str(e)})
 
 
 # ================================================================
