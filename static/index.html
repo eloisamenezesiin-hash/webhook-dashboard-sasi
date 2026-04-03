@@ -1462,38 +1462,43 @@ async function exportarRelatorio() {
 // BUSCA AVANÇADA POR CAMPO (Modal)
 // ==============================================================
 const CAMPOS_POR_APP = {
-    Ronda: {
-        canais: ["RONDA PERIÓDICA", "RONDA DEDICADA", "Ronda Periódica e Base Alternativa", "Chegada no Local", "CHEGADA NO LOCAL", "Saída do Local", "SAÍDA DO LOCAL", "RESPALDO", "CHUVA", "INTERVALO", "DISPENSADO - CENTRAL"],
+    "EQUIPE DE RESPOSTA": {
+        canais: ["ABASTECIMENTO", "CHAVE", "CHECKLIST VEÍCULO", "CHEGADA NO LOCAL", "CHUVA", "Checklist de Chaves", "DISPENSADO - CENTRAL", "GESTÃO ADM", "INTERVALO", "OCORRÊNCIA ABORTADA", "OFICINA", "PROBLEMA TÉCNICO", "PROBLEMAS COM CARTÃO", "RESPALDO", "RONDA DEDICADA", "RONDA PERIÓDICA", "SAÍDA DO LOCAL", "VANDALISMO E FURTO"],
         campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
         opcoes: ["sucesso", "erro", "pendente"]
     },
-    "Ocorrências": {
-        canais: ["Ocorrência Real", "OCORRÊNCIA ABORTADA", "VANDALISMO E FURTO"],
+    "Fiscalização": {
+        canais: ["Cadastramento", "Entrega de Imagens", "Melhorias", "Ocorrência Real", "Ronda Periódica e Base Alternativa", "Solicitação Supervisor de Análise", "Solicitação de Agente de Portaria", "Suporte IIN", "Visita"],
         campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
         opcoes: ["sucesso", "erro", "pendente"]
     },
-    Frota: {
-        canais: ["CHECKLIST VEÍCULO", "ABASTECIMENTO", "OFICINA"],
+    "Almoxarifado - AM": {
+        canais: ["Devolução de Material - GAE", "Devolução de Material - MNT", "Devolução de Material - OFICINA", "Solicitação de Material - GAE", "Solicitação de Material - MNT", "Solicitação de Material - OFICINA"],
         campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
         opcoes: ["sucesso", "erro", "pendente"]
     },
-    "Manutenção": {
-        canais: ["PROBLEMA TÉCNICO", "Melhorias", "Entrada - Alarme", "Entrada - CDA", "Entrada - CFTV", "Entrada - Elet.", "Entrada - Ref.", "Entrada - Sup. Técnica", "Saída - Alarme", "Saída - CDA", "Saída - CFTV", "Saída - Elet.", "Saída - Predial", "Saída - Ref.", "Saída - Sup. Técnica"],
+    "Manutenção - Técnicos": {
+        canais: ["Entrada - Alarme", "Entrada - CDA", "Entrada - CFTV", "Saída - Alarme", "Saída - CDA", "Saída - CFTV"],
         campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
         opcoes: ["sucesso", "erro", "pendente"]
     },
-    Portaria: {
-        canais: ["CHAVE", "Checklist de Chaves", "PROBLEMAS COM CARTÃO", "Solicitação de Agente de Portaria", "Cadastramento"],
+    "Manutenção Emergencial - Técnicos": {
+        canais: ["Almoxarifado - Elet.", "Almoxarifado - Predial", "Almoxarifado - Ref.", "Entrada - Elet.", "Entrada - Ref.", "Saída - Elet.", "Saída - Predial", "Saída - Ref."],
         campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
         opcoes: ["sucesso", "erro", "pendente"]
     },
-    Almoxarifado: {
-        canais: ["Almoxarifado - Elet.", "Almoxarifado - Predial", "Almoxarifado - Ref.", "Devolução de Material - GAE", "Devolução de Material - MNT", "Devolução de Material - OFICINA", "Solicitação de Material - GAE", "Solicitação de Material - MNT", "Solicitação de Material - OFICINA"],
+    "Manutenção - Superv. Tec.": {
+        canais: ["Entrada - Sup. Técnica", "Saída - Sup. Técnica"],
         campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
         opcoes: ["sucesso", "erro", "pendente"]
     },
-    "Gestão": {
-        canais: ["GESTÃO ADM", "Entrega de Imagens", "Solicitação Supervisor de Análise", "Suporte IIN", "Visita"],
+    "Manutenção - Terceirizados": {
+        canais: ["Chegada no Local", "Saída do Local"],
+        campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
+        opcoes: ["sucesso", "erro", "pendente"]
+    },
+    "Terceirizados - Gestão": {
+        canais: ["Chegada no Local", "Saída do Local"],
         campos: ["Canal", "Equipe", "Usuário", "Status", "Mensagem", "Evento"],
         opcoes: ["sucesso", "erro", "pendente"]
     }
