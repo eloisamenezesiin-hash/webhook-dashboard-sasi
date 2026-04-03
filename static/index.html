@@ -1477,6 +1477,91 @@ function animarKPI(id, valorFinal, formatarMilhar) {
 }
 
 // ==============================================================
+// ATUALIZAR GRÁFICOS COM BASE NAS LINHAS VISÍVEIS DA TABELA
+// ==============================================================
+function atualizarGraficosComTabelaFiltrada() {
+    const tbody = document.getElementById("tabela-eventos");
+    if (!tbody) return;
+    const rows = tbody.querySelectorAll('tr');
+    if (!rows.length) return;
+
+    const canalCount = {};
+    const equipeCount = {};
+    const horaCount = {};
+    const diaCount = {};
+    let total = 0;
+
+    // Paleta de cores para canais
+    const palette = [
+        "#2563eb","#7c3aed","#0891b2","#d97706","#16a34a","#dc2626","#0d9488",
+        "#c026d3","#ea580c","#4f46e5","#059669","#e11d48","#0284c7","#9333ea",
+        "#ca8a04","#be185d","#065f46","#7e22ce","#b91c1c","#1d4ed8"
+    ];
+    let corIdx = 0;
+
+    rows.forEach(row => {
+        if (row.style.display === 'none') return;
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 7) return;
+
+        total++;
+
+        // Canal (col 2)
+        const canal = (cells[2] ? cells[2].textContent.trim() : '—');
+        if (!canalCount[canal]) canalCount[canal] = { total: 0, cor: palette[corIdx++ % palette.length] };
+        canalCount[canal].total++;
+
+        // Equipe (col 3)
+        const equipe = (cells[3] ? cells[3].textContent.trim() : '—');
+        equipeCount[equipe] = (equipeCount[equipe] || 0) + 1;
+
+        // Data/Hora (col 1) - formato esperado: "DD/MM/YYYY HH:MM" ou similar
+        const dataText = (cells[1] ? cells[1].textContent.trim() : '');
+        if (dataText) {
+            // Extrair hora
+            const horaMatch = dataText.match(/(\d{1,2}):\d{2}/);
+            if (horaMatch) {
+                const h = horaMatch[1].padStart(2, '0') + ':00';
+                horaCount[h] = (horaCount[h] || 0) + 1;
+            }
+            // Extrair dia (DD/MM)
+            const diaMatch = dataText.match(/(\d{2})\/(\d{2})/);
+            if (diaMatch) {
+                const diaLabel = diaMatch[1] + '/' + diaMatch[2];
+                diaCount[diaLabel] = (diaCount[diaLabel] || 0) + 1;
+            }
+        }
+    });
+
+    // Atualizar KPIs
+    animarKPI("kpi-total", total, true);
+    animarKPI("kpi-canais", Object.keys(canalCount).length, false);
+    animarKPI("kpi-equipes", Object.keys(equipeCount).length, false);
+
+    // Atualizar gráfico de rosca (canais)
+    criarGraficoRosca(canalCount);
+
+    // Atualizar gráfico de equipes
+    criarGraficoEquipe(equipeCount);
+
+    // Atualizar gráfico de barras (por dia) - ordenar por data
+    const diasOrdenados = Object.keys(diaCount).sort((a, b) => {
+        const [dA, mA] = a.split('/').map(Number);
+        const [dB, mB] = b.split('/').map(Number);
+        return (mA * 100 + dA) - (mB * 100 + dB);
+    });
+    if (diasOrdenados.length > 0) {
+        criarGraficoBarras(diasOrdenados, diasOrdenados.map(d => diaCount[d]));
+    }
+
+    // Atualizar gráfico de linha (por hora) - ordenar por hora
+    const horasOrdenadas = Object.keys(horaCount).sort();
+    if (horasOrdenadas.length > 0) {
+        criarGraficoLinha(horasOrdenadas, horasOrdenadas.map(h => horaCount[h]));
+    }
+}
+
+// ==============================================================
 // AÇÃO: FILTRAR (botão)
 // ==============================================================
 async function aplicarFiltros() {
@@ -1485,6 +1570,11 @@ async function aplicarFiltros() {
     btn.style.background = "#64748b";
 
     await atualizarTudo();
+
+    // Se há filtros avançados ativos, reaplicar nas linhas carregadas pela API
+    if (buscasAvancadas.length > 0) {
+        reaplicarFiltrosAvancados();
+    }
 
     btn.textContent = "Aplicado!";
     btn.style.background = "#16a34a";
@@ -1870,7 +1960,48 @@ function renderizarTagsFiltro() {
 function removerFiltroBusca(index) {
     buscasAvancadas.splice(index, 1);
     renderizarTagsFiltro();
-    if (buscasAvancadas.length === 0) aplicarFiltros();
+    if (buscasAvancadas.length === 0) {
+        // Sem filtros avançados: mostrar tudo e recalcular via API
+        const tbody = document.getElementById("tabela-eventos");
+        if (tbody) {
+            tbody.querySelectorAll('tr').forEach(row => row.style.display = '');
+        }
+        aplicarFiltros();
+    } else {
+        // Reaplicar filtros restantes nas linhas da tabela
+        reaplicarFiltrosAvancados();
+    }
+}
+
+function reaplicarFiltrosAvancados() {
+    const campoColMap = { 'Canal': 2, 'Equipe': 3, 'Usuário': 4, 'Site': 4, 'Mensagem': 6, 'Evento': 5 };
+    const tbody = document.getElementById("tabela-eventos");
+    if (!tbody) return;
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length === 0) return;
+        let show = true;
+        for (const filtro of buscasAvancadas) {
+            let textoParaBusca = '';
+            if (campoColMap[filtro.campo] !== undefined) {
+                const colIdx = campoColMap[filtro.campo];
+                textoParaBusca = (cells[colIdx] ? cells[colIdx].textContent : '').toLowerCase().trim();
+            } else {
+                const evento = (cells[5] ? cells[5].textContent : '').toLowerCase();
+                const msg = (cells[6] ? cells[6].textContent : '').toLowerCase();
+                textoParaBusca = (evento + ' ' + msg).trim();
+            }
+            const valor = (filtro.opcao || '').toLowerCase().trim();
+            if (filtro.operacao === 'igual' && valor && textoParaBusca !== valor) show = false;
+            else if (filtro.operacao === 'contem' && valor && !textoParaBusca.includes(valor)) show = false;
+            else if (filtro.operacao === 'diferente' && valor && textoParaBusca === valor) show = false;
+            else if (filtro.operacao === 'vazio' && textoParaBusca !== '') show = false;
+            else if (filtro.operacao === 'nao_vazio' && textoParaBusca === '') show = false;
+        }
+        row.style.display = show ? '' : 'none';
+    });
+    atualizarGraficosComTabelaFiltrada();
 }
 
 function limparBuscaAvancada() {
@@ -1940,6 +2071,10 @@ function executarBuscaAvancada() {
                 row.style.display = show ? '' : 'none';
             });
         }
+
+        // Recalcular gráficos e KPIs com base nas linhas visíveis
+        atualizarGraficosComTabelaFiltrada();
+        return; // Não chamar aplicarFiltros pois já recalculamos com dados filtrados
     }
 
     aplicarFiltros();
@@ -1951,6 +2086,9 @@ function limparFiltros() {
     dpStartDate = null; dpEndDate = null; updateDateLabel();
     buscasAvancadas = [];
     renderizarTagsFiltro();
+    // Mostrar todas as linhas ocultas antes de recarregar
+    const tbody = document.getElementById("tabela-eventos");
+    if (tbody) tbody.querySelectorAll('tr').forEach(row => row.style.display = '');
     aplicarFiltros();
 }
 
