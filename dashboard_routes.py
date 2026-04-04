@@ -898,13 +898,22 @@ def api_manutencao_por_cliente_org():
         params = []
 
         # Filtro de equipe (app de manutenção)
+        # Usa Channel->>'name' pois Channel é um objeto JSON no webhook_logs
         if equipe:
             sql += """
-              AND raw_json::jsonb->'data'->>'Channel' IN (
+              AND raw_json::jsonb->'data'->'Channel'->>'name' IN (
                   SELECT DISTINCT canal FROM registros WHERE equipe = %s
               )
             """
             params.append(equipe)
+        else:
+            # Por padrão, filtra apenas canais de apps de Manutenção
+            sql += """
+              AND raw_json::jsonb->'data'->'Channel'->>'name' IN (
+                  SELECT DISTINCT canal FROM registros WHERE equipe LIKE %s
+              )
+            """
+            params.append("Manutenção%")
 
         # Filtro de data
         data_inicio = request.args.get("data_inicio")
