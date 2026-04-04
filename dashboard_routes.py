@@ -882,14 +882,14 @@ def api_manutencao_por_cliente_org():
         cur = conn.cursor()
 
         # Extrair o primeiro elemento de 'value' do item com title='Clientes'
-        # Path correto: raw_json -> data -> meta -> data -> dataView (array)
+        # Path correto: raw_json -> data -> meta -> dataView (array)
         sql = """
             SELECT
                 elem->'value'->>0 AS cliente,
                 COUNT(*) AS total
             FROM webhook_logs,
                 jsonb_array_elements(
-                    raw_json::jsonb->'data'->'meta'->'data'->'dataView'
+                    raw_json::jsonb->'data'->'meta'->'dataView'
                 ) AS elem
             WHERE (elem->>'title' = 'Clientes' OR elem->>'name' = 'clientes')
               AND elem->'value'->>0 IS NOT NULL
