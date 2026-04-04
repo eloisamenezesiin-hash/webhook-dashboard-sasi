@@ -34,7 +34,9 @@ def _add_date_filter(where, params):
 
 
 def _mnt_equipe_filter(equipe):
-    """Retorna (where_clause, params_list) para filtro de equipe Manutenção."""
+    """Retorna (where_clause, params_list) para filtro de app de Manutenção.
+    Nota: o campo 'equipe' no banco armazena o nome do app (tipo de manutenção),
+    não o cliente. Clientes reais: SEDUC, SEMED, SEMSA, SEDURB, UGPE, DPE, SEMEF."""
     if equipe:
         return "equipe = %s", [equipe]
     else:
@@ -162,10 +164,11 @@ def api_por_canal():
 
 
 # ================================================================
-# 3. /api/dashboard/por-equipe - Grafico horizontal
+# 3. /api/dashboard/por-equipe - Grafico horizontal (apps de manutenção)
 # ================================================================
 @dashboard_bp.route("/api/dashboard/por-equipe")
 def api_por_equipe():
+    """Eventos por app (tipo de manutenção). Campo 'equipe' = app no banco."""
     canal = request.args.get("canal")
     try:
         conn = _get_conn()
@@ -189,7 +192,7 @@ def api_por_equipe():
         equipes = {}
         for eq, total in rows:
             equipes[eq] = total
-        return jsonify({"equipes": equipes})
+        return jsonify({"equipes": equipes, "apps": equipes})
     except Exception as e:
         return jsonify({"equipes": {}, "erro": str(e)})
 
@@ -392,7 +395,7 @@ def api_filtros():
         equipes = [r[0] for r in cur.fetchall()]
         cur.close()
         conn.close()
-        return jsonify({"canais": canais, "equipes": equipes})
+        return jsonify({"canais": canais, "equipes": equipes, "apps": equipes})
     except Exception as e:
         return jsonify({"canais": [], "equipes": [], "erro": str(e)})
 
@@ -430,7 +433,7 @@ def api_exportar():
         output = io.StringIO()
         output.write("\ufeff")
         writer = csv.writer(output, delimiter=";")
-        writer.writerow(["Data/Hora", "Canal", "Tipo", "Equipe", "Site", "Mensagem"])
+        writer.writerow(["Data/Hora", "Canal", "Tipo", "App", "Site", "Mensagem"])
         for data, cn, tipo, eq, site, msg in rows:
             writer.writerow([
                 data.strftime("%d/%m/%Y %H:%M:%S") if data else "",
@@ -732,11 +735,13 @@ def api_manutencao_por_tecnico():
 
 
 # ================================================================
-# 12. /api/manutencao/por-cliente - Saídas agrupadas por site/unidade
+# 12. /api/manutencao/por-cliente - Saídas agrupadas por unidade/site
 # ================================================================
 @dashboard_bp.route("/api/manutencao/por-cliente")
 def api_manutencao_por_cliente():
-    """Agrupa saídas por site_nome (cliente/unidade)."""
+    """Agrupa saídas por site_nome (unidade/site atendido).
+    Nota: 'por-cliente' é mantido na URL por compatibilidade, mas os dados
+    são unidades/sites, não clientes (SEDUC, SEMED, SEMSA, etc.)."""
     equipe = request.args.get("equipe")
     try:
         conn = _get_conn()
@@ -862,6 +867,71 @@ def api_manutencao_por_mes():
         return jsonify({"dados": dados})
     except Exception as e:
         return jsonify({"dados": [], "erro": str(e)})
+
+
+# ================================================================
+# 15. /api/manutencao/por-cliente-org - Eventos por cliente (SEDUC, SEMED, etc.)
+# ================================================================
+@dashboard_bp.route("/api/manutencao/por-cliente-org")
+def api_manutencao_por_cliente_org():
+    """Agrupa eventos por cliente/órgão (SEDUC, SEMED, SEMSA, etc.)
+    extraindo do campo Clientes dentro de dataView no raw_json."""
+    equipe = request.args.get("equipe")
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        # Extrair o primeiro elemento de 'value' do item com title='Clientes'
+        # dentro do array dataView no raw_json
+        sql = """
+            SELECT
+                elem->'value'->>0 AS cliente,
+                COUNT(*) AS total
+            FROM webhook_logs,
+                jsonb_array_elements(
+                    raw_json::jsonb->'data'->'dataView'
+                ) AS elem
+            WHERE (elem->>'title' = 'Clientes' OR elem->>'name' = 'clientes')
+              AND elem->'value'->>0 IS NOT NULL
+              AND elem->'value'->>0 != ''
+        """
+        params = []
+
+        # Filtro de equipe (app de manutenção)
+        if equipe:
+            sql += """
+              AND raw_json::jsonb->'data'->>'Channel' IN (
+                  SELECT DISTINCT canal FROM registros WHERE equipe = %s
+              )
+            """
+            params.append(equipe)
+
+        # Filtro de data
+        data_inicio = request.args.get("data_inicio")
+        data_fim = request.args.get("data_fim")
+        if data_inicio:
+            sql += " AND (raw_json::jsonb->>'updatedAt')::date >= %s::date"
+            params.append(data_inicio)
+        if data_fim:
+            sql += " AND (raw_json::jsonb->>'updatedAt')::date < (%s::date + INTERVAL '1 day')"
+            params.append(data_fim)
+
+        sql += " GROUP BY 1 ORDER BY total DESC LIMIT 20"
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        clientes = [{"nome": r[0], "total": r[1]} for r in rows]
+        return jsonify({"clientes": clientes})
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "clientes": [],
+            "erro": str(e),
+            "trace": traceback.format_exc()[-500:]
+        })
 
 
 # ================================================================
