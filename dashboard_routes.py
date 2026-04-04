@@ -59,6 +59,7 @@ def painel():
 def api_stats():
     canal = request.args.get("canal")
     equipe = request.args.get("equipe")
+    todos = request.args.get("todos")  # todos=1 retorna todos os apps (dashboard geral)
     try:
         conn = _get_conn()
         cur = conn.cursor()
@@ -899,7 +900,10 @@ def api_manutencao_por_cliente_org():
 
         # Filtro de equipe (app de manutenção)
         # Usa Channel->>'name' pois Channel é um objeto JSON no webhook_logs
-        if equipe:
+        if todos:
+            # Sem filtro de app - mostra todos os clientes (dashboard geral)
+            pass
+        elif equipe:
             sql += """
               AND raw_json::jsonb->'data'->'Channel'->>'name' IN (
                   SELECT DISTINCT canal FROM registros WHERE equipe = %s
