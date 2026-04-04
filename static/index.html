@@ -1454,7 +1454,10 @@ async function mntCarregarMeses() {
 
 async function mntCarregarClientesOrg() {
     try {
-        const url = API_BASE + "/api/manutencao/por-cliente-org" + mntGetParams();
+        // Dashboard geral: todos=1 para mostrar todos os apps
+            const params = mntGetParams();
+            const sep = params ? params + "&todos=1" : "?todos=1";
+            const url = API_BASE + "/api/manutencao/por-cliente-org" + sep;
         console.log("[MNT] Carregando clientes org:", url);
         const r = await fetch(url);
         const d = await r.json();
