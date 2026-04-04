@@ -889,7 +889,7 @@ def api_manutencao_por_cliente_org():
                 COUNT(*) AS total
             FROM webhook_logs,
                 jsonb_array_elements(
-                    raw_json::jsonb->'data'->'dataView'
+                    raw_json::jsonb->'data'->'meta'->'data'->'dataView'
                 ) AS elem
             WHERE (elem->>'title' = 'Clientes' OR elem->>'name' = 'clientes')
               AND elem->'value'->>0 IS NOT NULL
