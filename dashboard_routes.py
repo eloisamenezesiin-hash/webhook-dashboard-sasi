@@ -882,7 +882,7 @@ def api_manutencao_por_cliente_org():
         cur = conn.cursor()
 
         # Extrair o primeiro elemento de 'value' do item com title='Clientes'
-        # dentro do array dataView no raw_json
+        # Path correto: raw_json -> data -> meta -> data -> dataView (array)
         sql = """
             SELECT
                 elem->'value'->>0 AS cliente,
@@ -932,6 +932,77 @@ def api_manutencao_por_cliente_org():
             "erro": str(e),
             "trace": traceback.format_exc()[-500:]
         })
+
+
+# ================================================================
+# DEBUG: Encontrar caminho correto do campo Clientes no raw_json
+# ================================================================
+@dashboard_bp.route("/api/debug/find-clientes")
+def api_debug_find_clientes():
+    """Busca o campo 'Clientes' ou 'clientes' dentro do raw_json."""
+    try:
+        conn = _get_conn()
+        cur = conn.cursor()
+
+        # Tentar vários caminhos possíveis
+        caminhos = {
+            "data->dataView": """
+                SELECT elem->'value'->>0, elem->>'title'
+                FROM webhook_logs,
+                    jsonb_array_elements(raw_json::jsonb->'data'->'dataView') AS elem
+                WHERE elem->>'title' ILIKE '%client%'
+                LIMIT 3
+            """,
+            "data->meta->data->dataView": """
+                SELECT elem->'value'->>0, elem->>'title'
+                FROM webhook_logs,
+                    jsonb_array_elements(raw_json::jsonb->'data'->'meta'->'data'->'dataView') AS elem
+                WHERE elem->>'title' ILIKE '%client%'
+                LIMIT 3
+            """,
+            "data->meta->dataView": """
+                SELECT elem->'value'->>0, elem->>'title'
+                FROM webhook_logs,
+                    jsonb_array_elements(raw_json::jsonb->'data'->'meta'->'dataView') AS elem
+                WHERE elem->>'title' ILIKE '%client%'
+                LIMIT 3
+            """,
+            "busca_textual_clientes": """
+                SELECT id,
+                    SUBSTRING(raw_json::text FROM '"Clientes".{0,200}') AS trecho
+                FROM webhook_logs
+                WHERE raw_json::text ILIKE '%Clientes%'
+                ORDER BY id DESC LIMIT 3
+            """,
+            "busca_SEDUC": """
+                SELECT id,
+                    SUBSTRING(raw_json::text FROM '.{50}SEDUC.{50}') AS trecho
+                FROM webhook_logs
+                WHERE raw_json::text ILIKE '%SEDUC%'
+                ORDER BY id DESC LIMIT 3
+            """,
+            "keys_nivel_data": """
+                SELECT jsonb_object_keys(raw_json::jsonb->'data') AS key
+                FROM webhook_logs
+                ORDER BY id DESC LIMIT 1
+            """,
+        }
+
+        resultados = {}
+        for nome, sql in caminhos.items():
+            try:
+                cur.execute(sql)
+                rows = cur.fetchall()
+                resultados[nome] = [list(r) for r in rows]
+            except Exception as e:
+                conn.rollback()
+                resultados[nome] = {"erro": str(e)}
+
+        cur.close()
+        conn.close()
+        return jsonify(resultados)
+    except Exception as e:
+        return jsonify({"erro": str(e)})
 
 
 # ================================================================
