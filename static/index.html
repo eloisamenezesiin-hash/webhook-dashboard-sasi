@@ -709,6 +709,12 @@
         .mnt-kpi.orange .bar { background: #f59e0b; }
         .mnt-kpi.orange .icon { background: rgba(245,158,11,0.15); color: #f59e0b; }
         .mnt-kpi.orange .value { color: #f59e0b; }
+        .mnt-kpi.emerald .bar { background: #10b981; }
+        .mnt-kpi.emerald .icon { background: rgba(16,185,129,0.15); color: #10b981; }
+        .mnt-kpi.emerald .value { color: #10b981; }
+        .mnt-kpi.amber .bar { background: #f59e0b; }
+        .mnt-kpi.amber .icon { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .mnt-kpi.amber .value { color: #f59e0b; }
         .mnt-kpi.red .bar { background: #ef4444; }
         .mnt-kpi.red .icon { background: rgba(239,68,68,0.15); color: #ef4444; }
         .mnt-kpi.red .value { color: #ef4444; }
@@ -1035,17 +1041,17 @@
                 <div class="value" id="mnt-kpi-saida">0</div>
                 <div class="label">Total Saida</div>
             </div>
-            <div class="mnt-kpi red">
-                <div class="bar"></div>
-                <div class="icon">&#9203;</div>
-                <div class="value" id="mnt-kpi-pendentes">0</div>
-                <div class="label">OS em Aberto</div>
-            </div>
-            <div class="mnt-kpi purple">
+            <div class="mnt-kpi emerald">
                 <div class="bar"></div>
                 <div class="icon">&#10004;</div>
                 <div class="value" id="mnt-kpi-concluidas">0</div>
-                <div class="label">OS Concluidas</div>
+                <div class="label">OS Conclu&iacute;das</div>
+            </div>
+            <div class="mnt-kpi amber">
+                <div class="bar"></div>
+                <div class="icon">&#9203;</div>
+                <div class="value" id="mnt-kpi-pendentes">0</div>
+                <div class="label">OS com Pend&ecirc;ncia</div>
             </div>
         </div>
         <div class="mnt-charts-grid">
@@ -1310,7 +1316,7 @@ async function mntCarregarStats() {
     const url = API_BASE + "/api/manutencao/stats" + mntGetParams();
     console.log("[MNT] Carregando stats:", url);
     // Mostrar loading
-    ["mnt-kpi-total","mnt-kpi-entrada","mnt-kpi-saida","mnt-kpi-pendentes","mnt-kpi-concluidas"].forEach(id => {
+    ["mnt-kpi-total","mnt-kpi-entrada","mnt-kpi-saida","mnt-kpi-concluidas","mnt-kpi-pendentes"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = "...";
     });
@@ -1323,11 +1329,11 @@ async function mntCarregarStats() {
         mntAnimarKPI("mnt-kpi-total", d.total_alertas || 0);
         mntAnimarKPI("mnt-kpi-entrada", d.total_entrada || 0);
         mntAnimarKPI("mnt-kpi-saida", d.total_saida || 0);
-        mntAnimarKPI("mnt-kpi-pendentes", d.os_pendentes || 0);
         mntAnimarKPI("mnt-kpi-concluidas", d.os_concluidas || 0);
+        mntAnimarKPI("mnt-kpi-pendentes", d.os_pendentes || 0);
     } catch(e) {
         console.error("[MNT] Stats ERRO:", e);
-        ["mnt-kpi-total","mnt-kpi-entrada","mnt-kpi-saida","mnt-kpi-pendentes","mnt-kpi-concluidas"].forEach(id => {
+        ["mnt-kpi-total","mnt-kpi-entrada","mnt-kpi-saida","mnt-kpi-concluidas","mnt-kpi-pendentes"].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = "!";
         });
