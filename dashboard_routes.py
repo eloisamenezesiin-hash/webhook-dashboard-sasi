@@ -878,6 +878,7 @@ def api_manutencao_por_cliente_org():
     """Agrupa eventos por cliente/órgão (SEDUC, SEMED, SEMSA, etc.)
     extraindo do campo Clientes dentro de dataView no raw_json."""
     equipe = request.args.get("equipe")
+    todos = request.args.get("todos")  # todos=1 retorna todos os apps (dashboard geral)
     try:
         conn = _get_conn()
         cur = conn.cursor()
