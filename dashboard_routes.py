@@ -885,7 +885,7 @@ def api_manutencao_por_cliente_org():
         # Path correto: raw_json -> data -> meta -> dataView (array)
         sql = """
             SELECT
-                elem->'value'->>0 AS cliente,
+                UPPER(TRIM(elem->'value'->>0)) AS cliente,
                 COUNT(*) AS total
             FROM webhook_logs,
                 jsonb_array_elements(
@@ -893,7 +893,7 @@ def api_manutencao_por_cliente_org():
                 ) AS elem
             WHERE (elem->>'title' = 'Clientes' OR elem->>'name' = 'clientes')
               AND elem->'value'->>0 IS NOT NULL
-              AND elem->'value'->>0 != ''
+              AND TRIM(elem->'value'->>0) != ''
         """
         params = []
 
