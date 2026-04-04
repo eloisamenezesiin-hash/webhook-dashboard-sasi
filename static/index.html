@@ -878,9 +878,9 @@
         </select>
     </div>
     <div class="filter-group">
-        <label for="filter-equipe">Equipe</label>
+        <label for="filter-equipe">App</label>
         <select id="filter-equipe" onchange="aplicarFiltros()">
-            <option value="">Todas as Equipes</option>
+            <option value="">Todos os Apps</option>
             <option value="EQUIPE DE RESPOSTA">EQUIPE DE RESPOSTA</option>
             <option value="Fiscalização">Fiscalização</option>
             <option value="Manutenção - Técnicos">Manutenção - Técnicos</option>
@@ -1012,7 +1012,7 @@
         </div>
         <div class="mnt-filters">
             <select id="mnt-equipe">
-                <option value="">Todas as Equipes</option>
+                <option value="">Todos os Apps</option>
                 <option value="Manutenção - Técnicos">Manutenção - Técnicos</option>
                 <option value="Manutenção Emergencial - Técnicos">Manutenção Emergencial</option>
             </select>
@@ -1064,12 +1064,16 @@
                 <canvas id="mnt-chart-tecnicos"></canvas>
             </div>
             <div class="mnt-chart">
-                <h3>Total de OS por Cliente</h3>
+                <h3>Total de OS por App</h3>
                 <canvas id="mnt-chart-clientes"></canvas>
             </div>
             <div class="mnt-chart">
                 <h3>Servicos por Mes</h3>
                 <canvas id="mnt-chart-meses"></canvas>
+            </div>
+            <div class="mnt-chart" style="grid-column: 1 / -1;">
+                <h3>Eventos por Cliente (Orgao)</h3>
+                <canvas id="mnt-chart-clientes-org"></canvas>
             </div>
         </div>
     </div>
@@ -1283,7 +1287,7 @@ function trocarView(view) {
 // ==============================================================
 // DASHBOARD MANUTENÇÃO - JavaScript
 // ==============================================================
-let mntChartCanais, mntChartTecnicos, mntChartClientes, mntChartMeses;
+let mntChartCanais, mntChartTecnicos, mntChartClientes, mntChartMeses, mntChartClientesOrg;
 
 function mntGetParams() {
     const equipe = document.getElementById("mnt-equipe").value;
@@ -1448,6 +1452,66 @@ async function mntCarregarMeses() {
     } catch(e) { console.error("MNT Meses:", e); }
 }
 
+async function mntCarregarClientesOrg() {
+    try {
+        const url = API_BASE + "/api/manutencao/por-cliente-org" + mntGetParams();
+        console.log("[MNT] Carregando clientes org:", url);
+        const r = await fetch(url);
+        const d = await r.json();
+        console.log("[MNT] Clientes org data:", JSON.stringify(d).substring(0,200));
+        const clientes = (d.clientes || []).slice(0, 15);
+        const labels = clientes.map(c => c.nome);
+        const valores = clientes.map(c => c.total);
+        const cores = [
+            "#3b82f6","#22c55e","#f59e0b","#ef4444","#a855f7",
+            "#06b6d4","#ec4899","#84cc16","#f97316","#6366f1",
+            "#14b8a6","#e11d48","#0ea5e9","#d946ef","#fb923c"
+        ];
+
+        if (mntChartClientesOrg) mntChartClientesOrg.destroy();
+        const ctx = document.getElementById("mnt-chart-clientes-org").getContext("2d");
+        mntChartClientesOrg = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: valores,
+                    backgroundColor: cores.slice(0, labels.length),
+                    borderRadius: 6,
+                    barThickness: 28,
+                }]
+            },
+            options: {
+                indexAxis: "y",
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: "#1e293b",
+                        titleColor: "#f1f5f9",
+                        bodyColor: "#94a3b8",
+                        borderColor: "#334155",
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        padding: 12,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: "rgba(148,163,184,0.08)" },
+                        ticks: { color: "#94a3b8", font: { size: 11 } },
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: "#f1f5f9", font: { size: 12, weight: "bold" } },
+                    }
+                }
+            }
+        });
+    } catch(e) { console.error("MNT ClientesOrg:", e); }
+}
+
 async function mntCarregarTudo() {
     console.log("[MNT] ========= mntCarregarTudo INICIADO =========");
     console.log("[MNT] API_BASE =", API_BASE);
@@ -1458,6 +1522,7 @@ async function mntCarregarTudo() {
             mntCarregarTecnicos(),
             mntCarregarClientes(),
             mntCarregarMeses(),
+            mntCarregarClientesOrg(),
         ]);
         console.log("[MNT] ========= mntCarregarTudo COMPLETO =========");
     } catch(e) { console.error("[MNT] mntCarregarTudo ERRO:", e); }
@@ -1557,7 +1622,7 @@ async function carregarFiltrosDinamicos() {
 
     if (data.equipes && data.equipes.length) {
         const sel = document.getElementById("filter-equipe");
-        sel.innerHTML = '<option value="">Todas as Equipes</option>';
+        sel.innerHTML = '<option value="">Todos os Apps</option>';
         data.equipes.forEach(e => {
             sel.innerHTML += `<option value="${e}">${e}</option>`;
         });
