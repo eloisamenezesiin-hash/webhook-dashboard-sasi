@@ -1330,7 +1330,7 @@ function trocarView(view, modo) {
     if (view === 'manutencao') {
         document.getElementById('view-manutencao').classList.add('active');
         if (modo === 'emergencial') {
-            trocarModo('emergencial');
+            setTimeout(function(){ trocarModo('emergencial'); }, 150);
         } else {
             document.getElementById('btn-manutencao').classList.add('active');
             if (modoAtual === 'emergencial') trocarModo('manutencao');
