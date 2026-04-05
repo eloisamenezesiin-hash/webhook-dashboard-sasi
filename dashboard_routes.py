@@ -617,11 +617,6 @@ def api_manutencao_stats():
                     base_params + ["Saída%", "Sa_da%"])
         total_saida = cur.fetchone()[0]
 
-        step = "entrada"
-        cur.execute(sql_total + " AND canal LIKE %s",
-                    base_params + ["Entrada%"])
-        total_entrada = cur.fetchone()[0]
-
         # Contar OS por status usando campo do formulário no webhook_logs
         # Path: raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1'
         step = "status_webhook"
@@ -662,10 +657,9 @@ def api_manutencao_stats():
         return jsonify({
             "total_alertas": total,
             "total_saida": total_saida,
-            "total_entrada": total_entrada,
             "os_concluidas": os_concluidas,
             "os_pendentes": os_pendentes,
-            "v": 4,
+            "v": 5,
         })
     except Exception as e:
         import traceback
@@ -674,7 +668,7 @@ def api_manutencao_stats():
             "step": step,
             "trace": traceback.format_exc()[-500:],
             "total_alertas": 0, "total_saida": 0,
-            "total_entrada": 0, "os_concluidas": 0, "os_pendentes": 0,
+            "os_concluidas": 0, "os_pendentes": 0,
         })
 
 
@@ -683,7 +677,7 @@ def api_manutencao_stats():
 # ================================================================
 @dashboard_bp.route("/api/manutencao/por-tecnico")
 def api_manutencao_por_tecnico():
-    """Agrupa entradas e saídas por comunicante (técnico)."""
+    """Agrupa saídas concluídas por comunicante (técnico)."""
     equipe = request.args.get("equipe")
     try:
         conn = _get_conn()
@@ -706,29 +700,16 @@ def api_manutencao_por_tecnico():
         )
         saidas = {r[0]: r[1] for r in cur.fetchall()}
 
-        # Entradas por técnico
-        entrada_params = base_params + ["Entrada%"]
-        cur.execute(
-            "SELECT comunicante, COUNT(*) as total FROM registros" + w +
-            " AND canal LIKE %s"
-            " GROUP BY comunicante ORDER BY total DESC LIMIT 20",
-            entrada_params
-        )
-        entradas = {r[0]: r[1] for r in cur.fetchall()}
-
         cur.close()
         conn.close()
 
-        # Combinar todos os técnicos
-        todos = set(list(saidas.keys()) + list(entradas.keys()))
         tecnicos = []
-        for nome in todos:
+        for nome, total in saidas.items():
             tecnicos.append({
                 "nome": nome,
-                "entradas": entradas.get(nome, 0),
-                "saidas": saidas.get(nome, 0),
+                "saidas": total,
             })
-        tecnicos.sort(key=lambda x: x["saidas"] + x["entradas"], reverse=True)
+        tecnicos.sort(key=lambda x: x["saidas"], reverse=True)
 
         return jsonify({"tecnicos": tecnicos[:20]})
     except Exception as e:
