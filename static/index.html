@@ -2749,18 +2749,6 @@ document.addEventListener('keydown', function(e) {
             });
         } catch(e) { console.error("[GERAL] Erro clientes org:", e); }
     }
-    const _origTrocarView = window.trocarView;
-    if (_origTrocarView) {
-        window.trocarView = function(v) {
-            _origTrocarView(v);
-            if (v === 'geral') setTimeout(carregarClientesOrgGeral, 500);
-        };
-    }
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", function() { setTimeout(carregarClientesOrgGeral, 2000); });
-    } else {
-        setTimeout(carregarClientesOrgGeral, 2000);
-    }
     </script>
 </body>
 </html>
