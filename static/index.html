@@ -2634,78 +2634,77 @@ document.addEventListener('keydown', function(e) {
 
 
 <script>
-// === GRAFICO CLIENTES POR ORGAO - DASHBOARD GERAL ===
-let chartClientesOrgGeral = null;
-async function carregarClientesOrgGeral() {
-    try {
-        const API = window.API_BASE || window.location.origin;
-        const r = await fetch(API + "/api/manutencao/por-cliente-org?todos=1");
-        const data = await r.json();
-        if (!data.clientes || !data.clientes.length) return;
-        const nomes = data.clientes.map(c => c.nome);
-        const totais = data.clientes.map(c => c.total);
-        const cores = [
-            '#00d4aa','#00b4d8','#e76f51','#f4a261','#a78bfa',
-            '#2dd4bf','#fb7185','#fbbf24','#38bdf8','#818cf8',
-            '#4ade80','#f472b6'
-        ];
-        const ctx = document.getElementById("chart-clientes-org-geral");
-        if (!ctx) return;
-        if (chartClientesOrgGeral) chartClientesOrgGeral.destroy();
-        chartClientesOrgGeral = new Chart(ctx, {
-            type: "bar",
-            data: {
-                labels: nomes,
-                datasets: [{
-                    label: "Eventos",
-                    data: totais,
-                    backgroundColor: cores.slice(0, nomes.length),
-                    borderRadius: 6,
-                    barThickness: 22
-                }]
-            },
-            options: {
-                indexAxis: "y",
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(ctx) {
-                                return ctx.parsed.x.toLocaleString('pt-BR') + ' eventos';
+    // === GRAFICO CLIENTES POR ORGAO - DASHBOARD GERAL (PIZZA) ===
+    let chartClientesOrgGeral = null;
+    async function carregarClientesOrgGeral() {
+        try {
+            const API = window.API_BASE || window.location.origin;
+            const r = await fetch(API + "/api/manutencao/por-cliente-org?todos=1");
+            const data = await r.json();
+            if (!data.clientes || !data.clientes.length) return;
+            const nomes = data.clientes.map(c => c.nome);
+            const totais = data.clientes.map(c => c.total);
+            const cores = [
+                '#00d4aa','#00b4d8','#e76f51','#f4a261','#a78bfa',
+                '#2dd4bf','#fb7185','#fbbf24','#38bdf8','#818cf8',
+                '#4ade80','#f472b6','#94a3b8','#c084fc','#67e8f9'
+            ];
+            const ctx = document.getElementById("chart-clientes-org-geral");
+            if (!ctx) return;
+            if (chartClientesOrgGeral) chartClientesOrgGeral.destroy();
+            chartClientesOrgGeral = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: nomes,
+                    datasets: [{
+                        data: totais,
+                        backgroundColor: cores.slice(0, nomes.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '55%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#334155',
+                                font: { size: 12, weight: 'bold' },
+                                padding: 12,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                                    return ' ' + ctx.label + ': ' + ctx.parsed.toLocaleString('pt-BR') + ' (' + pct + '%)';
+                                }
                             }
                         }
                     }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: "#64748b" },
-                        grid: { color: "rgba(0,0,0,0.06)" }
-                    },
-                    y: {
-                        ticks: { color: "#334155", font: { size: 12, weight: "bold" } },
-                        grid: { display: false }
-                    }
                 }
-            }
-        });
-    } catch(e) { console.error("[GERAL] Erro clientes org:", e); }
-}
-// Carrega quando o dashboard geral fica visivel
-const _origTrocarView = window.trocarView;
-if (_origTrocarView) {
-    window.trocarView = function(v) {
-        _origTrocarView(v);
-        if (v === 'geral') setTimeout(carregarClientesOrgGeral, 500);
-    };
-}
-// Carrega na inicializacao
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", function() { setTimeout(carregarClientesOrgGeral, 2000); });
-} else {
-    setTimeout(carregarClientesOrgGeral, 2000);
-}
-</script>
+            });
+        } catch(e) { console.error("[GERAL] Erro clientes org:", e); }
+    }
+    const _origTrocarView = window.trocarView;
+    if (_origTrocarView) {
+        window.trocarView = function(v) {
+            _origTrocarView(v);
+            if (v === 'geral') setTimeout(carregarClientesOrgGeral, 500);
+        };
+    }
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function() { setTimeout(carregarClientesOrgGeral, 2000); });
+    } else {
+        setTimeout(carregarClientesOrgGeral, 2000);
+    }
+    </script>
 </body>
 </html>
