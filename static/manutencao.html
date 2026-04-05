@@ -720,6 +720,12 @@ function trocarModo(modo) {
     }
     carregarTudo();
 }
+
+// Auto-detect modo from URL parameter
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('modo') === 'emergencial') {
+    trocarModo('emergencial');
+}
 </script>
 </body>
 </html>
