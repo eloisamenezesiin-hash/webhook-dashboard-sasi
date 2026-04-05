@@ -1028,8 +1028,8 @@ sEQVR42u18eXQUVfb/va+qunrPQjYWkUVRiYozituMJrKIooKo3bJIcGHfIiIzio6VGtxXQkKAiASUAH
 <div class="mnt-wrapper">
     <div class="mnt-header">
         <div>
-            <h1 id="mnt-titulo">Dashboard Tecnicos Manutencao</h1>
-            <p id="mnt-subtitulo">Monitoramento de servicos de saida</p>
+            <h1 id="mnt-titulo">Dashboard Técnicos Manutenção</h1>
+            <p id="mnt-subtitulo">Monitoramento de serviços de saída</p>
         </div>
         <div class="mode-tabs">
             <button class="mode-tab active" id="tab-manutencao" onclick="trocarModo('manutencao')">Manutenção</button>
@@ -1064,7 +1064,7 @@ sEQVR42u18eXQUVfb/va+qunrPQjYWkUVRiYozituMJrKIooKo3bJIcGHfIiIzio6VGtxXQkKAiASUAH
                 <div class="bar"></div>
                 <div class="icon">&#8600;</div>
                 <div class="value" id="mnt-kpi-saida">0</div>
-                <div class="label">Total Saida</div>
+                <div class="label">Total Saída</div>
             </div>
             <div class="mnt-kpi emerald">
                 <div class="bar"></div>
@@ -1081,11 +1081,11 @@ sEQVR42u18eXQUVfb/va+qunrPQjYWkUVRiYozituMJrKIooKo3bJIcGHfIiIzio6VGtxXQkKAiASUAH
         </div>
         <div class="mnt-charts-grid">
             <div class="mnt-chart">
-                <h3>Servicos por Canais de Saida</h3>
+                <h3>Serviços por Canais de Saída</h3>
                 <canvas id="mnt-chart-canais"></canvas>
             </div>
             <div class="mnt-chart">
-                <h3>Total Entrada e Saida por Tecnico</h3>
+                <h3>Total Entrada e Saída por Técnico</h3>
                 <canvas id="mnt-chart-tecnicos"></canvas>
             </div>
             <div class="mnt-chart">
@@ -1093,11 +1093,11 @@ sEQVR42u18eXQUVfb/va+qunrPQjYWkUVRiYozituMJrKIooKo3bJIcGHfIiIzio6VGtxXQkKAiASUAH
                 <canvas id="mnt-chart-clientes"></canvas>
             </div>
             <div class="mnt-chart">
-                <h3>Servicos por Mes</h3>
+                <h3>Serviços por Mês</h3>
                 <canvas id="mnt-chart-meses"></canvas>
             </div>
             <div class="mnt-chart" style="grid-column: 1 / -1;">
-                <h3>Eventos por Cliente (Orgao)</h3>
+                <h3>Eventos por Cliente (Órgão)</h3>
                 <canvas id="mnt-chart-clientes-org"></canvas>
             </div>
         </div>
@@ -1316,8 +1316,8 @@ function trocarModo(modo) {
         tabMnt.classList.add('active');
         sel.value = '';
         sel.style.display = '';
-        titulo.textContent = 'Dashboard Tecnicos Manutencao';
-        subtitulo.textContent = 'Monitoramento de servicos de saida';
+        titulo.textContent = 'Dashboard Técnicos Manutenção';
+        subtitulo.textContent = 'Monitoramento de serviços de saída';
         document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('btn-manutencao').classList.add('active');
     }
@@ -1371,13 +1371,13 @@ function mntAnimarKPI(id, valor) {
     const el = document.getElementById(id);
     if (!el) return;
     const atual = parseInt(el.textContent.replace(/\D/g,"")) || 0;
-    if (atual === valor) { el.textContent = valor.toLocaleString("pt-BR"); return; }
+    if (atual === valor) { el.textContent = valor.toLocaleString("pt-BR", {timeZone: "America/Manaus"}); return; }
     const duracao = 600;
     const inicio = performance.now();
     function step(ts) {
         const prog = Math.min((ts - inicio) / duracao, 1);
         const ease = 1 - Math.pow(1 - prog, 3);
-        el.textContent = Math.round(atual + (valor - atual) * ease).toLocaleString("pt-BR");
+        el.textContent = Math.round(atual + (valor - atual) * ease).toLocaleString("pt-BR", {timeZone: "America/Manaus"});
         if (prog < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
@@ -1860,7 +1860,7 @@ function criarGraficoRosca(canaisData) {
                         label: ctx => {
                             const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
                             const pct = ((ctx.parsed.x / total) * 100).toFixed(1);
-                            return ` ${ctx.parsed.x.toLocaleString("pt-BR")} alertas (${pct}%)`;
+                            return ` ${ctx.parsed.x.toLocaleString("pt-BR", {timeZone: "America/Manaus"})} alertas (${pct}%)`;
                         }
                     }
                 }
@@ -1986,7 +1986,7 @@ function criarGraficoEquipe(equipesData) {
                         label: ctx => {
                             const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
                             const pct = ((ctx.parsed.x / total) * 100).toFixed(1);
-                            return ` ${ctx.parsed.x.toLocaleString("pt-BR")} eventos (${pct}%)`;
+                            return ` ${ctx.parsed.x.toLocaleString("pt-BR", {timeZone: "America/Manaus"})} eventos (${pct}%)`;
                         }
                     }
                 }
@@ -2002,6 +2002,19 @@ function criarGraficoEquipe(equipesData) {
 // ==============================================================
 // TABELA (colunas: Status, Criado, Canal, Equipe, Site, Comunicante, Mensagem)
 // ==============================================================
+
+        // Converte data UTC para horário de Manaus (UTC-4)
+        function converterParaManaus(dataStr) {
+            if (!dataStr) return '\u2014';
+            try {
+                const parts = dataStr.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/);
+                if (!parts) return dataStr;
+                const [, dd, mm, yyyy, hh, mi, ss] = parts;
+                const utcDate = new Date(Date.UTC(+yyyy, +mm - 1, +dd, +hh, +mi, +ss));
+                return utcDate.toLocaleString('pt-BR', { timeZone: 'America/Manaus' });
+            } catch (e) { return dataStr; }
+        }
+
 function renderizarTabela(eventos) {
     const tbody = document.getElementById("tabela-eventos");
     if (!eventos || !eventos.length) {
@@ -2014,7 +2027,7 @@ function renderizarTabela(eventos) {
         return `
         <tr>
             <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-            <td>${e.data || '—'}</td>
+            <td>${converterParaManaus(e.data)}</td>
             <td>${e.canal || '—'}</td>
             <td>${e.equipe || '—'}</td>
             <td>${e.usuario || '—'}</td>
@@ -2050,10 +2063,10 @@ function animarKPI(id, valorFinal, formatarMilhar) {
     const interval = setInterval(() => {
         frame++;
         const val = Math.round(valorAtual + incremento * frame);
-        el.textContent = formatarMilhar ? val.toLocaleString("pt-BR") : val;
+        el.textContent = formatarMilhar ? val.toLocaleString("pt-BR", {timeZone: "America/Manaus"}) : val;
         if (frame >= frames) {
             clearInterval(interval);
-            el.textContent = formatarMilhar ? valorFinal.toLocaleString("pt-BR") : valorFinal;
+            el.textContent = formatarMilhar ? valorFinal.toLocaleString("pt-BR", {timeZone: "America/Manaus"}) : valorFinal;
         }
     }, duracao / frames);
 }
@@ -2306,7 +2319,7 @@ async function exportarRelatorio() {
 
         const header = "Criado;Canal;Equipe;Site;Comunicante;Mensagem\n";
         const linhas = dados.map(e =>
-            `${e.data};${e.canal};${e.equipe};${e.usuario};${e.comunicante || e.usuario};${e.mensagem || e.evento}`
+            `${converterParaManaus(e.data)};${e.canal};${e.equipe};${e.usuario};${e.comunicante || e.usuario};${e.mensagem || e.evento}`
         ).join("\n");
 
         const blob = new Blob(["\uFEFF" + header + linhas], { type: "text/csv;charset=utf-8;" });
@@ -2741,7 +2754,7 @@ document.addEventListener('keydown', function(e) {
                                 label: function(ctx) {
                                     const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
                                     const pct = ((ctx.parsed / total) * 100).toFixed(1);
-                                    return ' ' + ctx.label + ': ' + ctx.parsed.toLocaleString('pt-BR') + ' (' + pct + '%)';
+                                    return ' ' + ctx.label + ': ' + ctx.parsed.toLocaleString("pt-BR", {timeZone: "America/Manaus"}) + ' (' + pct + '%)';
                                 }
                             }
                         }
