@@ -1054,12 +1054,6 @@ sEQVR42u18eXQUVfb/va+qunrPQjYWkUVRiYozituMJrKIooKo3bJIcGHfIiIzio6VGtxXQkKAiASUAH
                 <div class="value" id="mnt-kpi-total">0</div>
                 <div class="label">Total Alertas</div>
             </div>
-            <div class="mnt-kpi green">
-                <div class="bar"></div>
-                <div class="icon">&#8599;</div>
-                <div class="value" id="mnt-kpi-entrada">0</div>
-                <div class="label">Total Entrada</div>
-            </div>
             <div class="mnt-kpi orange">
                 <div class="bar"></div>
                 <div class="icon">&#8600;</div>
@@ -1085,7 +1079,7 @@ sEQVR42u18eXQUVfb/va+qunrPQjYWkUVRiYozituMJrKIooKo3bJIcGHfIiIzio6VGtxXQkKAiASUAH
                 <canvas id="mnt-chart-canais"></canvas>
             </div>
             <div class="mnt-chart">
-                <h3>Total Entrada e Saída por Técnico</h3>
+                <h3>Saídas Concluídas por Técnico</h3>
                 <canvas id="mnt-chart-tecnicos"></canvas>
             </div>
             <div class="mnt-chart">
@@ -1387,7 +1381,7 @@ async function mntCarregarStats() {
     const url = API_BASE + "/api/manutencao/stats" + mntGetParams();
     console.log("[MNT] Carregando stats:", url);
     // Mostrar loading
-    ["mnt-kpi-total","mnt-kpi-entrada","mnt-kpi-saida","mnt-kpi-concluidas","mnt-kpi-pendentes"].forEach(id => {
+    ["mnt-kpi-total","mnt-kpi-saida","mnt-kpi-concluidas","mnt-kpi-pendentes"].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.textContent = "...";
     });
@@ -1398,13 +1392,12 @@ async function mntCarregarStats() {
         const d = await r.json();
         console.log("[MNT] Stats data:", JSON.stringify(d));
         mntAnimarKPI("mnt-kpi-total", d.total_alertas || 0);
-        mntAnimarKPI("mnt-kpi-entrada", d.total_entrada || 0);
         mntAnimarKPI("mnt-kpi-saida", d.total_saida || 0);
         mntAnimarKPI("mnt-kpi-concluidas", d.os_concluidas || 0);
         mntAnimarKPI("mnt-kpi-pendentes", d.os_pendentes || 0);
     } catch(e) {
         console.error("[MNT] Stats ERRO:", e);
-        ["mnt-kpi-total","mnt-kpi-entrada","mnt-kpi-saida","mnt-kpi-concluidas","mnt-kpi-pendentes"].forEach(id => {
+        ["mnt-kpi-total","mnt-kpi-saida","mnt-kpi-concluidas","mnt-kpi-pendentes"].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.textContent = "!";
         });
@@ -1447,20 +1440,18 @@ async function mntCarregarTecnicos() {
         console.log("[MNT] Tecnicos data:", JSON.stringify(d).substring(0,200));
         const tecs = (d.tecnicos || []).slice(0, 15);
         const labels = tecs.map(t => t.nome);
-        const entradas = tecs.map(t => t.entradas);
         const saidas = tecs.map(t => t.saidas);
         if (mntChartTecnicos) mntChartTecnicos.destroy();
         const ctx = document.getElementById("mnt-chart-tecnicos").getContext("2d");
         mntChartTecnicos = new Chart(ctx, {
             type: "bar",
             data: { labels, datasets: [
-                { label: "Entrada", data: entradas, backgroundColor: "#3b82f6", borderRadius: 4, barPercentage: 0.7 },
-                { label: "Saida", data: saidas, backgroundColor: "#f59e0b", borderRadius: 4, barPercentage: 0.7 }
+                { label: "Sa\u00eddas Conclu\u00eddas", data: saidas, backgroundColor: "#22c55e", borderRadius: 4, barPercentage: 0.7 }
             ] },
             options: {
                 indexAxis: "y", responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { position: "top", labels: { color: "#94a3b8", font: { size: 11 }, boxWidth: 12, padding: 16 } }, tooltip: { backgroundColor: "#1e293b", titleColor: "#f1f5f9", bodyColor: "#94a3b8", borderColor: "#334155", borderWidth: 1, cornerRadius: 8, padding: 12 } },
-                scales: { x: { stacked: true, grid: { color: "rgba(148,163,184,0.08)" }, ticks: { color: "#94a3b8", font: { size: 11 } } }, y: { stacked: true, grid: { display: false }, ticks: { color: "#f1f5f9", font: { size: 11 } } } }
+                plugins: { legend: { display: false }, tooltip: { backgroundColor: "#1e293b", titleColor: "#f1f5f9", bodyColor: "#94a3b8", borderColor: "#334155", borderWidth: 1, cornerRadius: 8, padding: 12 } },
+                scales: { x: { grid: { color: "rgba(148,163,184,0.08)" }, ticks: { color: "#94a3b8", font: { size: 11 } } }, y: { grid: { display: false }, ticks: { color: "#f1f5f9", font: { size: 11 } } } }
             }
         });
     } catch(e) { console.error("MNT Tecnicos:", e); }
