@@ -1028,8 +1028,8 @@ sEQVR42u18eXQUVfb/va+qunrPQjYWkUVRiYozituMJrKIooKo3bJIcGHfIiIzio6VGtxXQkKAiASUAH
 <div class="mnt-wrapper">
     <div class="mnt-header">
         <div>
-            <h1 id="mnt-titulo">Dashboard Técnicos Manutenção</h1>
-            <p id="mnt-subtitulo">Monitoramento de serviços de saída</p>
+            <h1 id="mnt-titulo">Dashboard Manutenção Sistemas</h1>
+            <p id="mnt-subtitulo">Monitoramento Manutenção Técnicos e Supervisores</p>
         </div>
         <div class="mode-tabs">
             <button class="mode-tab active" id="tab-manutencao" onclick="trocarModo('manutencao')">Manutenção</button>
@@ -1316,8 +1316,8 @@ function trocarModo(modo) {
         tabMnt.classList.add('active');
         sel.value = '';
         sel.style.display = '';
-        titulo.textContent = 'Dashboard Técnicos Manutenção';
-        subtitulo.textContent = 'Monitoramento de serviços de saída';
+        titulo.textContent = 'Dashboard Manutenção Sistemas';
+        subtitulo.textContent = 'Monitoramento Manutenção Técnicos e Supervisores';
         document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
         document.getElementById('btn-manutencao').classList.add('active');
     }
