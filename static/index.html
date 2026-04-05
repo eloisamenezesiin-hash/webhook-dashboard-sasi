@@ -1324,17 +1324,25 @@ function trocarModo(modo) {
 }
 
 function trocarView(view, modo) {
-    document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view-container').forEach(function(v){ v.classList.remove('active'); });
+    document.querySelectorAll('.sidebar-btn').forEach(function(b){ b.classList.remove('active'); });
 
     if (view === 'manutencao') {
         document.getElementById('view-manutencao').classList.add('active');
         if (modo === 'emergencial') {
-            setTimeout(function(){ trocarModo('emergencial'); }, 150);
+            modoAtual = 'emergencial';
+            document.getElementById('tab-manutencao').classList.remove('active');
+            document.getElementById('tab-emergencial').classList.add('active');
+            document.getElementById('mnt-equipe').value = 'Manuten\u00e7\u00e3o Emergencial - T\u00e9cnicos';
+            document.getElementById('mnt-equipe').style.display = 'none';
+            document.getElementById('mnt-titulo').textContent = 'Dashboard Emergencial';
+            document.getElementById('mnt-subtitulo').textContent = 'Manuten\u00e7\u00e3o Emergencial - T\u00e9cnicos';
+            document.getElementById('btn-emergencial').classList.add('active');
+            mntCarregarTudo();
         } else {
             document.getElementById('btn-manutencao').classList.add('active');
-            if (modoAtual === 'emergencial') trocarModo('manutencao');
-            else mntCarregarTudo();
+            if (modoAtual === 'emergencial') { trocarModo('manutencao'); }
+            else { mntCarregarTudo(); }
         }
         mntCarregado = true;
     } else {
