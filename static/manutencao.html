@@ -223,10 +223,6 @@ body {
 .mode-tab{padding:6px 18px;border-radius:20px;border:2px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.6);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.3s;white-space:nowrap;}
 .mode-tab.active{background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(255,255,255,0.5);}
 .mode-tab:hover{background:rgba(255,255,255,0.1);color:#fff;}
-body.emergencial-mode .header{background:linear-gradient(135deg,#5f1a1a 0%,#1a0a0a 100%)!important;}
-body.emergencial-mode .btn-filtrar{background:#ef4444!important;}
-body.emergencial-mode .kpi-card .kpi-bar{background:#ef4444!important;}
-body.emergencial-mode .mode-tab.active{border-color:#ef4444;background:rgba(239,68,68,0.2);}
 </style>
 </head>
 <body>
@@ -710,7 +706,6 @@ function trocarModo(modo) {
     if (modo === 'emergencial') {
         tabs[0].classList.remove('active');
         tabs[1].classList.add('active');
-        document.body.classList.add('emergencial-mode');
         sel.value = 'Manutenção Emergencial - Técnicos';
         sel.style.display = 'none';
         document.querySelector('h1').textContent = 'Dashboard Emergencial';
@@ -718,7 +713,6 @@ function trocarModo(modo) {
     } else {
         tabs[1].classList.remove('active');
         tabs[0].classList.add('active');
-        document.body.classList.remove('emergencial-mode');
         sel.value = '';
         sel.style.display = '';
         document.querySelector('h1').textContent = 'Dashboard Técnicos Manutenção';
