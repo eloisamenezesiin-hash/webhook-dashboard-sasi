@@ -2016,17 +2016,6 @@ function criarGraficoEquipe(equipesData) {
         }
 
 
-        // Converte data UTC para horário de Manaus (UTC-4)
-        function converterParaManaus(dataStr) {
-            if (!dataStr) return '\u2014';
-            try {
-                const parts = dataStr.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})\\s+(\\d{2}):(\\d{2}):(\\d{2})/);
-                if (!parts) return dataStr;
-                const [, dd, mm, yyyy, hh, mi, ss] = parts;
-                const utcDate = new Date(Date.UTC(+yyyy, +mm - 1, +dd, +hh, +mi, +ss));
-                return utcDate.toLocaleString('pt-BR', { timeZone: 'America/Manaus' });
-            } catch (e) { return dataStr; }
-        }
 
 function renderizarTabela(eventos) {
     const tbody = document.getElementById("tabela-eventos");
