@@ -754,6 +754,11 @@
             .main-content { padding: 12px; }
             .filter-bar { margin: 12px; margin-left: 72px; padding: 14px; }
         }
+        /* === ABAS MANUTENCAO / EMERGENCIAL === */
+        .mode-tabs{display:flex;gap:8px;align-items:center;margin-left:16px;}
+        .mode-tab{padding:6px 18px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--text-secondary);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.3s;white-space:nowrap;}
+        .mode-tab.active{background:rgba(59,130,246,0.15);color:var(--accent-blue);border-color:var(--accent-blue);}
+        .mode-tab:hover{background:rgba(59,130,246,0.08);color:var(--accent-blue);}
     </style>
 </head>
 <body>
@@ -801,7 +806,7 @@
             <span class="tooltip">Manutenção</span>
         </button>
         <!-- Emergencial -->
-        <button class="sidebar-btn" onclick="window.location.href='/static/manutencao.html?modo=emergencial'" title="Emergencial" id="btn-emergencial">
+        <button class="sidebar-btn" onclick="trocarView('manutencao','emergencial')" title="Emergencial" id="btn-emergencial">
             <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 10 10-12h-9l1-10z" stroke-linejoin="round" stroke-linecap="round"/></svg>
             <span class="tooltip">Emergencial</span>
         </button>
@@ -1022,8 +1027,12 @@
 <div class="mnt-wrapper">
     <div class="mnt-header">
         <div>
-            <h1>Dashboard Tecnicos Manutencao</h1>
-            <p>Monitoramento de servicos de saida</p>
+            <h1 id="mnt-titulo">Dashboard Tecnicos Manutencao</h1>
+            <p id="mnt-subtitulo">Monitoramento de servicos de saida</p>
+        </div>
+        <div class="mode-tabs">
+            <button class="mode-tab active" id="tab-manutencao" onclick="trocarModo('manutencao')">Manutenção</button>
+            <button class="mode-tab" id="tab-emergencial" onclick="trocarModo('emergencial')">Emergencial</button>
         </div>
         <div class="mnt-filters">
             <select id="mnt-equipe">
@@ -1282,16 +1291,51 @@ function scrollToSection(id) {
 // VIEW SWITCHING (Geral <-> Manutenção)
 // ==============================================================
 let mntCarregado = false;
-function trocarView(view) {
-    console.log("[MNT] trocarView chamado:", view);
+let modoAtual = 'manutencao';
+
+function trocarModo(modo) {
+    modoAtual = modo;
+    const tabMnt = document.getElementById('tab-manutencao');
+    const tabEmg = document.getElementById('tab-emergencial');
+    const sel = document.getElementById('mnt-equipe');
+    const titulo = document.getElementById('mnt-titulo');
+    const subtitulo = document.getElementById('mnt-subtitulo');
+
+    if (modo === 'emergencial') {
+        tabMnt.classList.remove('active');
+        tabEmg.classList.add('active');
+        sel.value = 'Manutenção Emergencial - Técnicos';
+        sel.style.display = 'none';
+        titulo.textContent = 'Dashboard Emergencial';
+        subtitulo.textContent = 'Manutenção Emergencial - Técnicos';
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-emergencial').classList.add('active');
+    } else {
+        tabEmg.classList.remove('active');
+        tabMnt.classList.add('active');
+        sel.value = '';
+        sel.style.display = '';
+        titulo.textContent = 'Dashboard Tecnicos Manutencao';
+        subtitulo.textContent = 'Monitoramento de servicos de saida';
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-manutencao').classList.add('active');
+    }
+    mntCarregarTudo();
+}
+
+function trocarView(view, modo) {
     document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
 
     if (view === 'manutencao') {
         document.getElementById('view-manutencao').classList.add('active');
-        document.getElementById('btn-manutencao').classList.add('active');
-        // Sempre recarregar ao trocar para manutenção
-        mntCarregarTudo();
+        if (modo === 'emergencial') {
+            trocarModo('emergencial');
+        } else {
+            document.getElementById('btn-manutencao').classList.add('active');
+            if (modoAtual === 'emergencial') trocarModo('manutencao');
+            else mntCarregarTudo();
+        }
         mntCarregado = true;
     } else {
         document.getElementById('view-geral').classList.add('active');
@@ -1299,7 +1343,6 @@ function trocarView(view) {
     }
 }
 
-// ==============================================================
 // DASHBOARD MANUTENÇÃO - JavaScript
 // ==============================================================
 let mntChartCanais, mntChartTecnicos, mntChartClientes, mntChartMeses, mntChartClientesOrg;
