@@ -1703,7 +1703,7 @@ async function carregarFiltrosDinamicos() {
 // ==============================================================
 async function atualizarTudo() {
     const filtros = getFiltros();
-
+    carregarClientesOrgGeral();
     if (modoAPI) {
         const [stats, canais, equipes, porDia, porHora, eventos] = await Promise.all([
             apiFetch("stats", filtros),
