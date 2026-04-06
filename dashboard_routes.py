@@ -33,14 +33,17 @@ def _add_date_filter(where, params):
         params.append(data_fim)
 
 
-def _mnt_equipe_filter(equipe):
+def _mnt_equipe_filter(equipe, modo=None):
     """Retorna (where_clause, params_list) para filtro de app de Manutenção.
     Nota: o campo 'equipe' no banco armazena o nome do app (tipo de manutenção),
-    não o cliente. Clientes reais: SEDUC, SEMED, SEMSA, SEDURB, UGPE, DPE, SEMEF."""
+    não o cliente. Clientes reais: SEDUC, SEMED, SEMSA, SEDURB, UGPE, DPE, SEMEF.
+    modo: 'manutencao' ou 'emergencial' - filtra pelo grupo correto de apps."""
     if equipe:
         return "equipe = %s", [equipe]
+    elif modo == 'emergencial':
+        return "equipe IN (%s, %s)", ["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."]
     else:
-        return "equipe LIKE %s", ["Manutenção - %"]
+        return "equipe IN (%s, %s)", ["Manutenção - Técnicos", "Manutenção - Superv. Tec."]
 
 
 # ================================================================
@@ -59,6 +62,7 @@ def painel():
 def api_stats():
     canal = request.args.get("canal")
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     todos = request.args.get("todos")  # todos=1 retorna todos os apps (dashboard geral)
     try:
         conn = _get_conn()
@@ -593,6 +597,7 @@ def api_debug_find_status():
 def api_manutencao_stats():
     """KPIs focados em Manutenção: total saída, por técnico, por status."""
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     step = "init"
     try:
         step = "connect"
@@ -600,7 +605,7 @@ def api_manutencao_stats():
         cur = conn.cursor()
 
         step = "filter"
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -666,9 +671,12 @@ def api_manutencao_stats():
             if equipe:
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
                 status_params.append(equipe)
+            elif modo == 'emergencial':
+                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+                status_params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
             else:
-                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' LIKE %s"
-                status_params.append("Manutenção%")
+                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+                status_params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
 
         # Filtro de data (usa campo data da tabela webhook_logs)
         data_inicio = request.args.get("data_inicio")
@@ -714,6 +722,7 @@ def api_manutencao_stats():
 def api_manutencao_por_tecnico():
     """Agrupa saídas concluídas por técnico (MobileProfile.name do webhook_logs)."""
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     try:
         conn = _get_conn()
         cur = conn.cursor()
@@ -761,10 +770,16 @@ def api_manutencao_por_tecnico():
                   AND TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') != ''
             """
 
-        # Filtro de equipe para manutencao (emergencial ja filtrou acima)
-        if not is_emergencial and equipe:
+        # Filtro de equipe (Group.name no webhook_logs)
+        if equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
+        elif modo == 'emergencial':
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
+        else:
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
 
         # Filtro de data
         data_inicio = request.args.get("data_inicio")
@@ -797,11 +812,12 @@ def api_manutencao_por_cliente():
     Nota: 'por-cliente' é mantido na URL por compatibilidade, mas os dados
     são unidades/sites, não clientes (SEDUC, SEMED, SEMSA, etc.)."""
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     try:
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -848,11 +864,12 @@ def api_manutencao_por_cliente():
 def api_manutencao_por_canal():
     """Serviços por canal de saída."""
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     try:
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause, "canal IS NOT NULL"]
         base_params = list(eq_params)
@@ -883,11 +900,12 @@ def api_manutencao_por_canal():
 def api_manutencao_por_mes():
     """Serviços de saída agrupados por mês."""
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     try:
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -931,6 +949,7 @@ def api_manutencao_por_cliente_org():
     """Agrupa eventos por cliente/órgão (SEDUC, SEMED, SEMSA, etc.)
     extraindo do campo Clientes dentro de dataView no raw_json."""
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     todos = request.args.get("todos")  # todos=1 retorna todos os apps (dashboard geral)
     try:
         conn = _get_conn()
@@ -958,28 +977,14 @@ def api_manutencao_por_cliente_org():
             # Sem filtro de app - mostra todos os clientes (dashboard geral)
             pass
         elif equipe:
-            is_emergencial = "Emergencial" in equipe
-            if is_emergencial:
-                # Emergencial: filtrar direto pelo Group.name no webhook_logs
-                sql += """
-                  AND raw_json::jsonb->'data'->'Group'->>'name' = %s
-                """
-            else:
-                # Manutencao: filtrar via Channel cruzando com registros
-                sql += """
-                  AND raw_json::jsonb->'data'->'Channel'->>'name' IN (
-                      SELECT DISTINCT canal FROM registros WHERE equipe = %s
-                  )
-                """
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
+        elif modo == 'emergencial':
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
         else:
-            # Por padrão, filtra apenas canais de apps de Manutenção
-            sql += """
-              AND raw_json::jsonb->'data'->'Channel'->>'name' IN (
-                  SELECT DISTINCT canal FROM registros WHERE equipe LIKE %s
-              )
-            """
-            params.append("Manutenção - %")
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
 
         # Filtro de data
         data_inicio = request.args.get("data_inicio")
@@ -1130,14 +1135,16 @@ def _add_date_filter(where, params):
         params.append(data_fim)
 
 
-def _mnt_equipe_filter(equipe):
+def _mnt_equipe_filter(equipe, modo):
     """Retorna (where_clause, params_list) para filtro de app de Manutenção.
     Nota: o campo 'equipe' no banco armazena o nome do app (tipo de manutenção),
     não o cliente. Clientes reais: SEDUC, SEMED, SEMSA, SEDURB, UGPE, DPE, SEMEF."""
     if equipe:
         return "equipe = %s", [equipe]
+    elif modo == 'emergencial':
+        return "equipe IN (%s, %s)", ["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."]
     else:
-        return "equipe LIKE %s", ["Manutenção%"]
+        return "equipe IN (%s, %s)", ["Manutenção - Técnicos", "Manutenção - Superv. Tec."]
 
 
 # ================================================================
@@ -1156,6 +1163,7 @@ def painel():
 def api_stats():
     canal = request.args.get("canal")
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     todos = request.args.get("todos")  # todos=1 retorna todos os apps (dashboard geral)
     try:
         conn = _get_conn()
@@ -1697,7 +1705,7 @@ def api_manutencao_stats():
         cur = conn.cursor()
 
         step = "filter"
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -1763,9 +1771,12 @@ def api_manutencao_stats():
             if equipe:
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
                 status_params.append(equipe)
+            elif modo == 'emergencial':
+                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+                status_params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
             else:
-                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' LIKE %s"
-                status_params.append("Manutenção%")
+                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+                status_params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
 
         # Filtro de data (usa campo data da tabela webhook_logs)
         data_inicio = request.args.get("data_inicio")
@@ -1858,10 +1869,16 @@ def api_manutencao_por_tecnico():
                   AND TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') != ''
             """
 
-        # Filtro de equipe para manutencao (emergencial ja filtrou acima)
-        if not is_emergencial and equipe:
+        # Filtro de equipe (Group.name no webhook_logs)
+        if equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
+        elif modo == 'emergencial':
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
+        else:
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
 
         # Filtro de data
         data_inicio = request.args.get("data_inicio")
@@ -1898,7 +1915,7 @@ def api_manutencao_por_cliente():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -1949,7 +1966,7 @@ def api_manutencao_por_canal():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause, "canal IS NOT NULL"]
         base_params = list(eq_params)
@@ -1984,7 +2001,7 @@ def api_manutencao_por_mes():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -2028,6 +2045,7 @@ def api_manutencao_por_cliente_org():
     """Agrupa eventos por cliente/órgão (SEDUC, SEMED, SEMSA, etc.)
     extraindo do campo Clientes dentro de dataView no raw_json."""
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     todos = request.args.get("todos")  # todos=1 retorna todos os apps (dashboard geral)
     try:
         conn = _get_conn()
@@ -2055,28 +2073,14 @@ def api_manutencao_por_cliente_org():
             # Sem filtro de app - mostra todos os clientes (dashboard geral)
             pass
         elif equipe:
-            is_emergencial = "Emergencial" in equipe
-            if is_emergencial:
-                # Emergencial: filtrar direto pelo Group.name no webhook_logs
-                sql += """
-                  AND raw_json::jsonb->'data'->'Group'->>'name' = %s
-                """
-            else:
-                # Manutencao: filtrar via Channel cruzando com registros
-                sql += """
-                  AND raw_json::jsonb->'data'->'Channel'->>'name' IN (
-                      SELECT DISTINCT canal FROM registros WHERE equipe = %s
-                  )
-                """
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
+        elif modo == 'emergencial':
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
         else:
-            # Por padrão, filtra apenas canais de apps de Manutenção
-            sql += """
-              AND raw_json::jsonb->'data'->'Channel'->>'name' IN (
-                  SELECT DISTINCT canal FROM registros WHERE equipe LIKE %s
-              )
-            """
-            params.append("Manutenção%")
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
 
         # Filtro de data
         data_inicio = request.args.get("data_inicio")
@@ -2227,14 +2231,16 @@ def _add_date_filter(where, params):
         params.append(data_fim)
 
 
-def _mnt_equipe_filter(equipe):
+def _mnt_equipe_filter(equipe, modo):
     """Retorna (where_clause, params_list) para filtro de app de Manutenção.
     Nota: o campo 'equipe' no banco armazena o nome do app (tipo de manutenção),
     não o cliente. Clientes reais: SEDUC, SEMED, SEMSA, SEDURB, UGPE, DPE, SEMEF."""
     if equipe:
         return "equipe = %s", [equipe]
+    elif modo == 'emergencial':
+        return "equipe IN (%s, %s)", ["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."]
     else:
-        return "equipe LIKE %s", ["Manutenção%"]
+        return "equipe IN (%s, %s)", ["Manutenção - Técnicos", "Manutenção - Superv. Tec."]
 
 
 # ================================================================
@@ -2253,6 +2259,7 @@ def painel():
 def api_stats():
     canal = request.args.get("canal")
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     todos = request.args.get("todos")  # todos=1 retorna todos os apps (dashboard geral)
     try:
         conn = _get_conn()
@@ -2794,7 +2801,7 @@ def api_manutencao_stats():
         cur = conn.cursor()
 
         step = "filter"
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -2860,9 +2867,12 @@ def api_manutencao_stats():
             if equipe:
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
                 status_params.append(equipe)
+            elif modo == 'emergencial':
+                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+                status_params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
             else:
-                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' LIKE %s"
-                status_params.append("Manutenção%")
+                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+                status_params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
 
         # Filtro de data (usa campo data da tabela webhook_logs)
         data_inicio = request.args.get("data_inicio")
@@ -2955,10 +2965,16 @@ def api_manutencao_por_tecnico():
                   AND TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') != ''
             """
 
-        # Filtro de equipe para manutencao (emergencial ja filtrou acima)
-        if not is_emergencial and equipe:
+        # Filtro de equipe (Group.name no webhook_logs)
+        if equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
+        elif modo == 'emergencial':
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
+        else:
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
 
         # Filtro de data
         data_inicio = request.args.get("data_inicio")
@@ -2995,7 +3011,7 @@ def api_manutencao_por_cliente():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -3046,7 +3062,7 @@ def api_manutencao_por_canal():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause, "canal IS NOT NULL"]
         base_params = list(eq_params)
@@ -3081,7 +3097,7 @@ def api_manutencao_por_mes():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -3125,6 +3141,7 @@ def api_manutencao_por_cliente_org():
     """Agrupa eventos por cliente/órgão (SEDUC, SEMED, SEMSA, etc.)
     extraindo do campo Clientes dentro de dataView no raw_json."""
     equipe = request.args.get("equipe")
+    modo = request.args.get("modo")
     todos = request.args.get("todos")  # todos=1 retorna todos os apps (dashboard geral)
     try:
         conn = _get_conn()
@@ -3152,28 +3169,14 @@ def api_manutencao_por_cliente_org():
             # Sem filtro de app - mostra todos os clientes (dashboard geral)
             pass
         elif equipe:
-            is_emergencial = "Emergencial" in equipe
-            if is_emergencial:
-                # Emergencial: filtrar direto pelo Group.name no webhook_logs
-                sql += """
-                  AND raw_json::jsonb->'data'->'Group'->>'name' = %s
-                """
-            else:
-                # Manutencao: filtrar via Channel cruzando com registros
-                sql += """
-                  AND raw_json::jsonb->'data'->'Channel'->>'name' IN (
-                      SELECT DISTINCT canal FROM registros WHERE equipe = %s
-                  )
-                """
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
+        elif modo == 'emergencial':
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
         else:
-            # Por padrão, filtra apenas canais de apps de Manutenção
-            sql += """
-              AND raw_json::jsonb->'data'->'Channel'->>'name' IN (
-                  SELECT DISTINCT canal FROM registros WHERE equipe LIKE %s
-              )
-            """
-            params.append("Manutenção%")
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+            params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
 
         # Filtro de data
         data_inicio = request.args.get("data_inicio")
