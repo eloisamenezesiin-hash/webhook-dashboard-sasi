@@ -673,47 +673,61 @@ def api_manutencao_stats():
 
 
 # ================================================================
-# 11. /api/manutencao/por-tecnico - Saída agrupada por comunicante
+# 11. /api/manutencao/por-tecnico - Saídas concluídas por técnico
 # ================================================================
 @dashboard_bp.route("/api/manutencao/por-tecnico")
 def api_manutencao_por_tecnico():
-    """Agrupa saídas concluídas por comunicante (técnico)."""
+    """Agrupa saídas concluídas por técnico (MobileProfile.name do webhook_logs)."""
     equipe = request.args.get("equipe")
     try:
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe)
+        # Buscar técnico e status diretamente do webhook_logs JSON
+        # MobileProfile.name = nome do técnico
+        # meta.data.status_do_servico_id_1 = status do serviço
+        sql = """
+            SELECT
+                TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') AS tecnico,
+                COUNT(*) AS total
+            FROM webhook_logs
+            WHERE raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido'
+              AND raw_json::jsonb->'data'->'MobileProfile'->>'name' IS NOT NULL
+              AND TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') != ''
+        """
+        params = []
 
-        base_where = [eq_clause, "comunicante IS NOT NULL", "comunicante != ''"]
-        base_params = list(eq_params)
-        _add_date_filter(base_where, base_params)
-        w = " WHERE " + " AND ".join(base_where)
+        # Filtro de equipe (Group.name no webhook_logs)
+        if equipe:
+            sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
+            params.append(equipe)
 
-        # Saídas por técnico
-        saida_params = base_params + ["Saída%", "Sa_da%"]
-        cur.execute(
-            "SELECT comunicante, COUNT(*) as total FROM registros" + w +
-            " AND (canal LIKE %s OR canal LIKE %s)"
-            " GROUP BY comunicante ORDER BY total DESC LIMIT 20",
-            saida_params
-        )
-        saidas = {r[0]: r[1] for r in cur.fetchall()}
+        # Filtro de data
+        data_inicio = request.args.get("data_inicio")
+        data_fim = request.args.get("data_fim")
+        if data_inicio:
+            sql += " AND data >= %s::date"
+            params.append(data_inicio)
+        if data_fim:
+            sql += " AND data < (%s::date + INTERVAL '1 day')"
+            params.append(data_fim)
+
+        sql += " GROUP BY 1 ORDER BY total DESC LIMIT 20"
+        cur.execute(sql, params)
+        rows = cur.fetchall()
 
         cur.close()
         conn.close()
 
-        tecnicos = []
-        for nome, total in saidas.items():
-            tecnicos.append({
-                "nome": nome,
-                "saidas": total,
-            })
-        tecnicos.sort(key=lambda x: x["saidas"], reverse=True)
-
-        return jsonify({"tecnicos": tecnicos[:20]})
+        tecnicos = [{"nome": r[0], "saidas": r[1]} for r in rows]
+        return jsonify({"tecnicos": tecnicos, "v": 6})
     except Exception as e:
-        return jsonify({"tecnicos": [], "erro": str(e)})
+        import traceback
+        return jsonify({
+            "tecnicos": [],
+            "erro": str(e),
+            "trace": traceback.format_exc()[-500:]
+        })
 
 
 # ================================================================
