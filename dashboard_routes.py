@@ -694,7 +694,7 @@ def api_manutencao_stats():
             "total_saida": total_saida,
             "os_concluidas": os_concluidas,
             "os_pendentes": os_pendentes,
-            "v": 10,
+            "v": 11,
         })
     except Exception as e:
         import traceback
@@ -719,35 +719,52 @@ def api_manutencao_por_tecnico():
         cur = conn.cursor()
 
         # Buscar técnico e status diretamente do webhook_logs JSON
-        # MobileProfile.name = nome do técnico
-        # meta.data.status_do_servico_id_1..5 = status de cada OS
-        # Cada registro pode ter até 5 OS, cada com seu próprio status.
-        # Contamos quantas OS concluídas existem por técnico.
-        sql = """
-            SELECT
-                TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') AS tecnico,
-                SUM(
-                    CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'concluido' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'concluido' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'concluido' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'concluido' THEN 1 ELSE 0 END
-                ) AS total
-            FROM webhook_logs
-            WHERE (
-                    raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido'
-                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'concluido'
-                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'concluido'
-                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'concluido'
-                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'concluido'
-                )
-              AND raw_json::jsonb->'data'->'MobileProfile'->>'name' IS NOT NULL
-              AND TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') != ''
-        """
+        # Emergencial usa campo unico "status_do_servico"
+        # Manutencao usa campos "status_do_servico_id_1" ate "id_5"
+        is_emergencial = equipe and "Emergencial" in equipe
         params = []
 
-        # Filtro de equipe (Group.name no webhook_logs)
-        if equipe:
+        if is_emergencial:
+            # Emergencial: campo unico status_do_servico
+            sql = """
+                SELECT
+                    TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') AS tecnico,
+                    COUNT(*) AS total
+                FROM webhook_logs
+                WHERE raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico' = 'concluido'
+                  AND raw_json::jsonb->'data'->'MobileProfile'->>'name' IS NOT NULL
+                  AND TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') != ''
+            """
+            if equipe:
+                sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
+                params.append(equipe)
+        else:
+            # Manutencao: campos id_1 ate id_5
+            sql = """
+                SELECT
+                    TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') AS tecnico,
+                    SUM(
+                        CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'concluido' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'concluido' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'concluido' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'concluido' THEN 1 ELSE 0 END
+                    ) AS total
+                FROM webhook_logs
+                WHERE (
+                        raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido'
+                     OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'concluido'
+                     OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'concluido'
+                     OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'concluido'
+                     OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'concluido'
+                    )
+                  AND raw_json::jsonb->'data'->'MobileProfile'->>'name' IS NOT NULL
+                  AND TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') != ''
+            """
+        params = []
+
+        # Filtro de equipe para manutencao (emergencial ja filtrou acima)
+        if not is_emergencial and equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
 
@@ -769,7 +786,7 @@ def api_manutencao_por_tecnico():
         conn.close()
 
         tecnicos = [{"nome": r[0], "saidas": int(r[1])} for r in rows]
-        return jsonify({"tecnicos": tecnicos, "v": 7})
+        return jsonify({"tecnicos": tecnicos, "v": 11})
     except Exception as e:
         import traceback
         return jsonify({
