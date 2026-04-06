@@ -754,6 +754,11 @@
             .main-content { padding: 12px; }
             .filter-bar { margin: 12px; margin-left: 72px; padding: 14px; }
         }
+        /* === ABAS MANUTENCAO / EMERGENCIAL === */
+        .mode-tabs{display:flex;gap:8px;align-items:center;margin-left:16px;}
+        .mode-tab{padding:6px 18px;border-radius:20px;border:2px solid var(--border);background:transparent;color:var(--text-secondary);font-weight:700;font-size:13px;cursor:pointer;transition:all 0.3s;white-space:nowrap;}
+        .mode-tab.active{background:rgba(59,130,246,0.15);color:var(--accent-blue);border-color:var(--accent-blue);}
+        .mode-tab:hover{background:rgba(59,130,246,0.08);color:var(--accent-blue);}
     </style>
 </head>
 <body>
@@ -799,6 +804,13 @@
                 <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
             </svg>
             <span class="tooltip">Manutenção</span>
+        </button>
+        <!-- Emergencial -->
+        <button class="sidebar-btn" onclick="trocarView('manutencao','emergencial')" title="Emergencial" id="btn-emergencial">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2L3 14h9l-1 10 10-12h-9l1-10z"/>
+            </svg>
+            <span class="tooltip">Emergencial</span>
         </button>
         <button class="sidebar-btn" onclick="exportarRelatorio()" title="Exportar">
             <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
@@ -885,9 +897,15 @@
             <option value="Fiscalização">Fiscalização</option>
             <option value="Manutenção - Técnicos">Manutenção - Técnicos</option>
             <option value="Manutenção - Superv. Tec.">Manutenção - Superv. Tec.</option>
-            <option value="Almoxarifado - AM">Almoxarifado - AM</option>
             <option value="Manutenção Emergencial - Técnicos">Manutenção Emergencial - Técnicos</option>
+            <option value="Manutenção Emergencial - Superv.">Manutenção Emergencial - Superv.</option>
+            <option value="Manutenção - Terceirizados">Manutenção - Terceirizados</option>
             <option value="Terceirizados - Gestão">Terceirizados - Gestão</option>
+            <option value="Almoxarifado - AM">Almoxarifado - AM</option>
+            <option value="Laboratório e Tecnologia">Laboratório e Tecnologia</option>
+            <option value="Frota">Frota</option>
+            <option value="Apoio Logístico">Apoio Logístico</option>
+            <option value="Supervisor GCA">Supervisor GCA</option>
         </select>
     </div>
     <div class="filter-buttons">
@@ -1007,15 +1025,20 @@
 <div class="mnt-wrapper">
     <div class="mnt-header">
         <div>
-            <h1>Dashboard Tecnicos Manutencao</h1>
-            <p>Monitoramento de servicos de saida</p>
+            <h1 id="mnt-titulo">Dashboard Tecnicos Manutencao</h1>
+            <p id="mnt-subtitulo">Monitoramento de servicos de saida</p>
+        </div>
+        <div class="mode-tabs">
+            <button class="mode-tab active" id="tab-manutencao" onclick="trocarModo('manutencao')">Manutenção</button>
+            <button class="mode-tab" id="tab-emergencial" onclick="trocarModo('emergencial')">Emergencial</button>
         </div>
         <div class="mnt-filters">
             <select id="mnt-equipe">
                 <option value="">Todos os Apps</option>
                 <option value="Manutenção - Técnicos">Manutenção - Técnicos</option>
                 <option value="Manutenção - Superv. Tec.">Manutenção - Superv. Tec.</option>
-                <option value="Manutenção Emergencial - Técnicos">Manutenção Emergencial</option>
+                <option value="Manutenção Emergencial - Técnicos">Manutenção Emergencial - Técnicos</option>
+                <option value="Manutenção Emergencial - Superv.">Manutenção Emergencial - Superv.</option>
                 <option value="Manutenção - Terceirizados">Manutenção - Terceirizados</option>
             </select>
             <input type="date" id="mnt-data-inicio" title="Data Inicio">
@@ -1107,6 +1130,7 @@
                     <option value="Laboratório e Tecnologia">Laboratório e Tecnologia</option>
                     <option value="Frota">Frota</option>
                     <option value="Apoio Logístico">Apoio Logístico</option>
+                    <option value="Supervisor GCA">Supervisor GCA</option>
                 </select>
             </div>
             <div class="modal-field">
@@ -1269,16 +1293,55 @@ function scrollToSection(id) {
 // VIEW SWITCHING (Geral <-> Manutenção)
 // ==============================================================
 let mntCarregado = false;
-function trocarView(view) {
-    console.log("[MNT] trocarView chamado:", view);
+let modoAtual = 'manutencao';
+
+function trocarModo(modo) {
+    modoAtual = modo;
+    const tabMnt = document.getElementById('tab-manutencao');
+    const tabEmg = document.getElementById('tab-emergencial');
+    const sel = document.getElementById('mnt-equipe');
+    const titulo = document.getElementById('mnt-titulo');
+    const subtitulo = document.getElementById('mnt-subtitulo');
+
+    if (modo === 'emergencial') {
+        tabMnt.classList.remove('active');
+        tabEmg.classList.add('active');
+        sel.value = 'Manutenção Emergencial - Técnicos';
+        sel.style.display = 'none';
+        titulo.textContent = 'Dashboard Emergencial';
+        subtitulo.textContent = 'Manutenção Emergencial - Técnicos';
+        // Highlight emergencial sidebar button
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-emergencial').classList.add('active');
+    } else {
+        tabEmg.classList.remove('active');
+        tabMnt.classList.add('active');
+        sel.value = '';
+        sel.style.display = '';
+        titulo.textContent = 'Dashboard Tecnicos Manutencao';
+        subtitulo.textContent = 'Monitoramento de servicos de saida';
+        // Highlight manutencao sidebar button
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-manutencao').classList.add('active');
+    }
+    mntCarregarTudo();
+}
+
+function trocarView(view, modo) {
+    console.log("[MNT] trocarView chamado:", view, modo);
     document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
 
     if (view === 'manutencao') {
         document.getElementById('view-manutencao').classList.add('active');
-        document.getElementById('btn-manutencao').classList.add('active');
-        // Sempre recarregar ao trocar para manutenção
-        mntCarregarTudo();
+        // Se modo especificado, usar trocarModo; senão manter o modo atual ou padrão
+        if (modo === 'emergencial') {
+            trocarModo('emergencial');
+        } else {
+            document.getElementById('btn-manutencao').classList.add('active');
+            if (modoAtual === 'emergencial') trocarModo('manutencao');
+            else mntCarregarTudo();
+        }
         mntCarregado = true;
     } else {
         document.getElementById('view-geral').classList.add('active');
@@ -1297,6 +1360,7 @@ function mntGetParams() {
     const df = document.getElementById("mnt-data-fim").value;
     const p = new URLSearchParams();
     if (equipe) p.set("equipe", equipe);
+    p.set("modo", modoAtual);
     if (di) p.set("data_inicio", di);
     if (df) p.set("data_fim", df);
     return p.toString() ? "?" + p.toString() : "";
