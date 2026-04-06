@@ -245,7 +245,7 @@ body {
   </div>
 
   <div class="header-right">
-    <select id="filtro-equipe">
+    <select id="filtro-equipe" onchange="carregarTudo()">
       <option value="">Todos os Apps</option>
       <option value="ManutenÃ§Ã£o - TÃ©cnicos">ManutenÃ§Ã£o - TÃ©cnicos</option>
       <option value="ManutenÃ§Ã£o - Superv. Tec.">ManutenÃ§Ã£o - Superv. Tec.</option>
@@ -695,7 +695,22 @@ document.querySelectorAll(".chart-card canvas").forEach(c => {
   c.parentElement.style.minHeight = "360px";
 });
 
-// Carregar ao abrir
+// Ler equipe da URL e pré-selecionar dropdown antes de carregar
+(function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const equipeUrl = urlParams.get('equipe');
+  if (equipeUrl) {
+    const sel = document.getElementById('filtro-equipe');
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === equipeUrl) {
+        sel.value = equipeUrl;
+        break;
+      }
+    }
+  }
+})();
+
+// Carregar ao abrir (já com equipe pré-selecionada se veio pela URL)
 carregarTudo();
 </script>
 
