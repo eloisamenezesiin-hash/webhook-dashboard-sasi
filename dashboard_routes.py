@@ -647,6 +647,14 @@ def api_manutencao_stats():
         """
         status_params = []
 
+        # Filtro de equipe (usa Group.name do JSON no webhook_logs)
+        if equipe:
+            status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
+            status_params.append(equipe)
+        else:
+            status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' LIKE %s"
+            status_params.append("Manutenção%")
+
         # Filtro de data (usa campo data da tabela webhook_logs)
         data_inicio = request.args.get("data_inicio")
         data_fim = request.args.get("data_fim")
@@ -671,7 +679,7 @@ def api_manutencao_stats():
             "total_saida": total_saida,
             "os_concluidas": os_concluidas,
             "os_pendentes": os_pendentes,
-            "v": 8,
+            "v": 9,
         })
     except Exception as e:
         import traceback
