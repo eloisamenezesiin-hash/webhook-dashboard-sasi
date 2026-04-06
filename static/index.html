@@ -1036,7 +1036,7 @@ sEQVR42u18eXQUVfb/va+qunrPQjYWkUVRiYozituMJrKIooKo3bJIcGHfIiIzio6VGtxXQkKAiASUAH
             <button class="mode-tab" id="tab-emergencial" onclick="trocarModo('emergencial')">Emergencial</button>
         </div>
         <div class="mnt-filters">
-            <select id="mnt-equipe">
+            <select id="mnt-equipe" onchange="mntCarregarTudo()">
                 <option value="">Todos os Apps</option>
                 <option value="Manutenção - Técnicos">Manutenção - Técnicos</option>
                 <option value="Manutenção Emergencial - Técnicos">Manutenção Emergencial</option>
@@ -1660,6 +1660,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     await atualizarTudo();
+
+    // Auto-navegar para view de manutencao se veio ?view=manutencao&equipe=...
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewParam = urlParams.get('view');
+    const equipeParam = urlParams.get('equipe');
+    if (viewParam === 'manutencao') {
+        trocarView('manutencao', equipeParam || '');
+    }
 
     if (modoAPI) {
         refreshInterval = setInterval(atualizarTudo, 30000);
