@@ -694,7 +694,7 @@ def api_manutencao_stats():
             "total_saida": total_saida,
             "os_concluidas": os_concluidas,
             "os_pendentes": os_pendentes,
-            "v": 11,
+            "v": 12,
         })
     except Exception as e:
         import traceback
@@ -786,16 +786,11 @@ def api_manutencao_por_tecnico():
         conn.close()
 
         tecnicos = [{"nome": r[0], "saidas": int(r[1])} for r in rows]
-        return jsonify({"tecnicos": tecnicos, "v": 11})
+        return jsonify({"tecnicos": tecnicos, "v": 12})
     except Exception as e:
         import traceback
-        return jsonify({
-            "tecnicos": [],
-            "erro": str(e),
-            "trace": traceback.format_exc()[-500:]
-        })
-
-
+        debug_info = {"sql_pct_s": sql.count('%s'), "params_len": len(params), "params_str": str(params)[:200], "is_emerg": str(is_emergencial), "equipe": str(equipe)}
+        return jsonify({"tecnicos": [], "erro": str(e), "trace": traceback.format_exc()[-500:], "debug": debug_info})
 # ================================================================
 # 12. /api/manutencao/por-cliente - Saídas agrupadas por unidade/site
 # ================================================================
