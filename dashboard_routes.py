@@ -617,15 +617,33 @@ def api_manutencao_stats():
                     base_params + ["Saída%", "Sa_da%"])
         total_saida = cur.fetchone()[0]
 
-        # Contar OS por status usando campo do formulário no webhook_logs
-        # Path: raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1'
+        # Contar OS por status usando campos id_1 até id_5 no webhook_logs
+        # Cada registro pode ter até 5 OS, cada com seu próprio status
         step = "status_webhook"
         status_sql = """
             SELECT
-                raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' as status,
-                COUNT(*) as total
+                SUM(
+                    CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'concluido' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'concluido' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'concluido' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'concluido' THEN 1 ELSE 0 END
+                ) as total_concluido,
+                SUM(
+                    CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'com_pendencia' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'com_pendencia' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'com_pendencia' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'com_pendencia' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'com_pendencia' THEN 1 ELSE 0 END
+                ) as total_pendencia
             FROM webhook_logs
-            WHERE raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' IS NOT NULL
+            WHERE (
+                raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' IS NOT NULL
+             OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' IS NOT NULL
+             OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' IS NOT NULL
+             OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' IS NOT NULL
+             OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' IS NOT NULL
+            )
         """
         status_params = []
 
@@ -639,17 +657,11 @@ def api_manutencao_stats():
             status_sql += " AND data < (%s::date + INTERVAL '1 day')"
             status_params.append(data_fim)
 
-        status_sql += " GROUP BY 1"
         cur.execute(status_sql, status_params)
-        status_rows = cur.fetchall()
+        row = cur.fetchone()
 
-        os_concluidas = 0
-        os_pendentes = 0
-        for status_val, cnt in status_rows:
-            if status_val == "concluido":
-                os_concluidas = cnt
-            elif status_val == "com_pendencia":
-                os_pendentes = cnt
+        os_concluidas = int(row[0] or 0) if row else 0
+        os_pendentes = int(row[1] or 0) if row else 0
 
         cur.close()
         conn.close()
@@ -659,7 +671,7 @@ def api_manutencao_stats():
             "total_saida": total_saida,
             "os_concluidas": os_concluidas,
             "os_pendentes": os_pendentes,
-            "v": 5,
+            "v": 8,
         })
     except Exception as e:
         import traceback
