@@ -694,7 +694,7 @@ def api_manutencao_stats():
             "total_saida": total_saida,
             "os_concluidas": os_concluidas,
             "os_pendentes": os_pendentes,
-            "v": 13,
+            "v": 14,
         })
     except Exception as e:
         import traceback
@@ -760,7 +760,6 @@ def api_manutencao_por_tecnico():
                   AND raw_json::jsonb->'data'->'MobileProfile'->>'name' IS NOT NULL
                   AND TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') != ''
             """
-        params = []
 
         # Filtro de equipe para manutencao (emergencial ja filtrou acima)
         if not is_emergencial and equipe:
@@ -785,7 +784,7 @@ def api_manutencao_por_tecnico():
         conn.close()
 
         tecnicos = [{"nome": r[0], "saidas": int(r[1])} for r in rows]
-        return jsonify({"tecnicos": tecnicos, "v": 13})
+        return jsonify({"tecnicos": tecnicos, "v": 14})
     except Exception as e:
         import traceback
         return jsonify({"tecnicos": [], "erro": str(e), "trace": traceback.format_exc()[-500:]})
