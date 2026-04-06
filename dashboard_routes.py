@@ -685,13 +685,27 @@ def api_manutencao_por_tecnico():
 
         # Buscar técnico e status diretamente do webhook_logs JSON
         # MobileProfile.name = nome do técnico
-        # meta.data.status_do_servico_id_1 = status do serviço
+        # meta.data.status_do_servico_id_1..5 = status de cada OS
+        # Cada registro pode ter até 5 OS, cada com seu próprio status.
+        # Contamos quantas OS concluídas existem por técnico.
         sql = """
             SELECT
                 TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') AS tecnico,
-                COUNT(*) AS total
+                SUM(
+                    CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'concluido' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'concluido' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'concluido' THEN 1 ELSE 0 END
+                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'concluido' THEN 1 ELSE 0 END
+                ) AS total
             FROM webhook_logs
-            WHERE raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido'
+            WHERE (
+                    raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido'
+                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'concluido'
+                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'concluido'
+                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'concluido'
+                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'concluido'
+                )
               AND raw_json::jsonb->'data'->'MobileProfile'->>'name' IS NOT NULL
               AND TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') != ''
         """
@@ -719,8 +733,8 @@ def api_manutencao_por_tecnico():
         cur.close()
         conn.close()
 
-        tecnicos = [{"nome": r[0], "saidas": r[1]} for r in rows]
-        return jsonify({"tecnicos": tecnicos, "v": 6})
+        tecnicos = [{"nome": r[0], "saidas": int(r[1])} for r in rows]
+        return jsonify({"tecnicos": tecnicos, "v": 7})
     except Exception as e:
         import traceback
         return jsonify({
