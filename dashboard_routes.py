@@ -617,43 +617,58 @@ def api_manutencao_stats():
                     base_params + ["Saída%", "Sa_da%"])
         total_saida = cur.fetchone()[0]
 
-        # Contar OS por status usando campos id_1 até id_5 no webhook_logs
-        # Cada registro pode ter até 5 OS, cada com seu próprio status
+        # Contar OS por status no webhook_logs
+        # Emergencial usa campo unico "status_do_servico"
+        # Manutencao usa campos "status_do_servico_id_1" ate "id_5" (ate 5 OS por registro)
         step = "status_webhook"
-        status_sql = """
-            SELECT
-                SUM(
-                    CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'concluido' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'concluido' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'concluido' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'concluido' THEN 1 ELSE 0 END
-                ) as total_concluido,
-                SUM(
-                    CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'com_pendencia' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'com_pendencia' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'com_pendencia' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'com_pendencia' THEN 1 ELSE 0 END
-                  + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'com_pendencia' THEN 1 ELSE 0 END
-                ) as total_pendencia
-            FROM webhook_logs
-            WHERE (
-                raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' IS NOT NULL
-             OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' IS NOT NULL
-             OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' IS NOT NULL
-             OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' IS NOT NULL
-             OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' IS NOT NULL
-            )
-        """
+        is_emergencial = equipe and "Emergencial" in equipe
         status_params = []
 
-        # Filtro de equipe (usa Group.name do JSON no webhook_logs)
-        if equipe:
-            status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
+        if is_emergencial:
+            # Emergencial: campo unico status_do_servico
+            status_sql = """
+                SELECT
+                    SUM(CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico' = 'concluido' THEN 1 ELSE 0 END) as total_concluido,
+                    SUM(CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico' = 'com_pendencia' THEN 1 ELSE 0 END) as total_pendencia
+                FROM webhook_logs
+                WHERE raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico' IS NOT NULL
+                  AND raw_json::jsonb->'data'->'Group'->>'name' = %s
+            """
             status_params.append(equipe)
         else:
-            status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' LIKE %s"
-            status_params.append("Manutenção%")
+            # Manutencao: campos id_1 ate id_5
+            status_sql = """
+                SELECT
+                    SUM(
+                        CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'concluido' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'concluido' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'concluido' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'concluido' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'concluido' THEN 1 ELSE 0 END
+                    ) as total_concluido,
+                    SUM(
+                        CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' = 'com_pendencia' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' = 'com_pendencia' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' = 'com_pendencia' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' = 'com_pendencia' THEN 1 ELSE 0 END
+                      + CASE WHEN raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' = 'com_pendencia' THEN 1 ELSE 0 END
+                    ) as total_pendencia
+                FROM webhook_logs
+                WHERE (
+                    raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_1' IS NOT NULL
+                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_2' IS NOT NULL
+                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_3' IS NOT NULL
+                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_4' IS NOT NULL
+                 OR raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico_id_5' IS NOT NULL
+                )
+            """
+            # Filtro de equipe para manutencao
+            if equipe:
+                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
+                status_params.append(equipe)
+            else:
+                status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' LIKE %s"
+                status_params.append("Manutenção%")
 
         # Filtro de data (usa campo data da tabela webhook_logs)
         data_inicio = request.args.get("data_inicio")
@@ -679,7 +694,7 @@ def api_manutencao_stats():
             "total_saida": total_saida,
             "os_concluidas": os_concluidas,
             "os_pendentes": os_pendentes,
-            "v": 9,
+            "v": 10,
         })
     except Exception as e:
         import traceback
