@@ -40,7 +40,7 @@ def _mnt_equipe_filter(equipe):
     if equipe:
         return "equipe = %s", [equipe]
     else:
-        return "equipe LIKE %s", ["Manutenção%"]
+        return "equipe LIKE %s", ["Manutenção - %"]
 
 
 # ================================================================
@@ -979,7 +979,7 @@ def api_manutencao_por_cliente_org():
                   SELECT DISTINCT canal FROM registros WHERE equipe LIKE %s
               )
             """
-            params.append("Manutenção%")
+           params.append("Manutenção - %")
 
         # Filtro de data
         data_inicio = request.args.get("data_inicio")
