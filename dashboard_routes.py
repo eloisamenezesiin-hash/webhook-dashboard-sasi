@@ -694,7 +694,7 @@ def api_manutencao_stats():
             "total_saida": total_saida,
             "os_concluidas": os_concluidas,
             "os_pendentes": os_pendentes,
-            "v": 12,
+            "v": 13,
         })
     except Exception as e:
         import traceback
@@ -734,10 +734,9 @@ def api_manutencao_por_tecnico():
                 WHERE raw_json::jsonb->'data'->'meta'->'data'->>'status_do_servico' = 'concluido'
                   AND raw_json::jsonb->'data'->'MobileProfile'->>'name' IS NOT NULL
                   AND TRIM(raw_json::jsonb->'data'->'MobileProfile'->>'name') != ''
+                  AND raw_json::jsonb->'data'->'Group'->>'name' = %s
             """
-            if equipe:
-                sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
-                params.append(equipe)
+            params.append(equipe)
         else:
             # Manutencao: campos id_1 ate id_5
             sql = """
@@ -786,11 +785,10 @@ def api_manutencao_por_tecnico():
         conn.close()
 
         tecnicos = [{"nome": r[0], "saidas": int(r[1])} for r in rows]
-        return jsonify({"tecnicos": tecnicos, "v": 12})
+        return jsonify({"tecnicos": tecnicos, "v": 13})
     except Exception as e:
         import traceback
-        debug_info = {"sql_pct_s": sql.count('%s'), "params_len": len(params), "params_str": str(params)[:200], "is_emerg": str(is_emergencial), "equipe": str(equipe)}
-        return jsonify({"tecnicos": [], "erro": str(e), "trace": traceback.format_exc()[-500:], "debug": debug_info})
+        return jsonify({"tecnicos": [], "erro": str(e), "trace": traceback.format_exc()[-500:]})
 # ================================================================
 # 12. /api/manutencao/por-cliente - Saídas agrupadas por unidade/site
 # ================================================================
