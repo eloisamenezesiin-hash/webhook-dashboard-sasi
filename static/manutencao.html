@@ -270,12 +270,6 @@ body {
       <div class="kpi-value" id="kpi-total">0</div>
       <div class="kpi-label">Total Alertas</div>
     </div>
-    <div class="kpi-card kpi-green">
-      <div class="kpi-bar"></div>
-      <div class="kpi-icon">&#8599;</div>
-      <div class="kpi-value" id="kpi-entrada">0</div>
-      <div class="kpi-label">Total Entrada</div>
-    </div>
     <div class="kpi-card kpi-orange">
       <div class="kpi-bar"></div>
       <div class="kpi-icon">&#8600;</div>
@@ -363,7 +357,6 @@ async function carregarStats() {
     const r = await fetch(API_BASE + "/api/manutencao/stats" + getParams());
     const d = await r.json();
     animarKPI("kpi-total", d.total_alertas || 0);
-    animarKPI("kpi-entrada", d.total_entrada || 0);
     animarKPI("kpi-saida", d.total_saida || 0);
     animarKPI("kpi-pendentes", d.os_pendentes || 0);
     animarKPI("kpi-concluidas", d.os_concluidas || 0);
@@ -737,8 +730,6 @@ function trocarModo(modo) {
         document.querySelector('h1').textContent = 'Dashboard Técnicos Manutenção';
         document.getElementById('subtitulo').textContent = 'Monitoramento de serviços de saída';
     }
-    // Esconder card Total Entrada no modo emergencial
-    document.getElementById('kpi-entrada').closest('.kpi-card').style.display = (modo === 'emergencial') ? 'none' : '';
     carregarTudo();
 }
 
