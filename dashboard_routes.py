@@ -654,6 +654,33 @@ def api_debug_find_status():
 # ================================================================
 # 10. /api/manutencao/stats - KPIs do Dashboard Manutenção (Saída)
 # ================================================================
+
+
+@dashboard_bp.route("/api/cache-debug")
+def cache_debug():
+    """Endpoint temporário para diagnosticar conexão Redis."""
+    import traceback
+    info = {"redis_url_set": bool(REDIS_URL), "redis_url_prefix": (REDIS_URL or "")[:30]}
+    try:
+        from redis import Redis
+        info["redis_import"] = "ok"
+    except ImportError as e:
+        info["redis_import"] = str(e)
+        return jsonify(info)
+    try:
+        r = Redis.from_url(REDIS_URL, decode_responses=True, socket_timeout=2)
+        pong = r.ping()
+        info["ping"] = pong
+        r.set("_debug_test", "hello", ex=30)
+        val = r.get("_debug_test")
+        info["set_get"] = val
+        info["status"] = "connected"
+    except Exception as e:
+        info["error"] = str(e)
+        info["traceback"] = traceback.format_exc()
+        info["status"] = "failed"
+    return jsonify(info)
+
 @dashboard_bp.route("/api/manutencao/stats")
 def api_manutencao_stats():
     """KPIs focados em Manutenção: total saída, por técnico, por status."""
