@@ -38,11 +38,9 @@ def _mnt_equipe_filter(equipe, modo=None):
     Nota: o campo 'equipe' no banco armazena o nome do app (tipo de manutenção),
     não o cliente. Clientes reais: SEDUC, SEMED, SEMSA, SEDURB, UGPE, DPE, SEMEF.
     modo: 'manutencao' ou 'emergencial' - filtra pelo grupo correto de apps."""
-    if modo is None:
-        modo = request.args.get("modo")
     if equipe:
         return "equipe = %s", [equipe]
-    elif modo == 'emergencial':
+    elif request.args.get("modo") == 'emergencial':
         return "equipe IN (%s, %s)", ["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."]
     else:
         return "equipe IN (%s, %s)", ["Manutenção - Técnicos", "Manutenção - Superv. Tec."]
@@ -673,7 +671,7 @@ def api_manutencao_stats():
             if equipe:
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
                 status_params.append(equipe)
-            elif modo == 'emergencial':
+            elif request.args.get("modo") == 'emergencial':
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
                 status_params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
             else:
@@ -776,7 +774,7 @@ def api_manutencao_por_tecnico():
         if equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
-        elif modo == 'emergencial':
+        elif request.args.get("modo") == 'emergencial':
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
             params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
         else:
@@ -981,7 +979,7 @@ def api_manutencao_por_cliente_org():
         elif equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
-        elif modo == 'emergencial':
+        elif request.args.get("modo") == 'emergencial':
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
             params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
         else:
@@ -1137,15 +1135,13 @@ def _add_date_filter(where, params):
         params.append(data_fim)
 
 
-def _mnt_equipe_filter(equipe, modo=None):
+def _mnt_equipe_filter(equipe, modo):
     """Retorna (where_clause, params_list) para filtro de app de Manutenção.
     Nota: o campo 'equipe' no banco armazena o nome do app (tipo de manutenção),
     não o cliente. Clientes reais: SEDUC, SEMED, SEMSA, SEDURB, UGPE, DPE, SEMEF."""
-    if modo is None:
-        modo = request.args.get("modo")
     if equipe:
         return "equipe = %s", [equipe]
-    elif modo == 'emergencial':
+    elif request.args.get("modo") == 'emergencial':
         return "equipe IN (%s, %s)", ["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."]
     else:
         return "equipe IN (%s, %s)", ["Manutenção - Técnicos", "Manutenção - Superv. Tec."]
@@ -1775,7 +1771,7 @@ def api_manutencao_stats():
             if equipe:
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
                 status_params.append(equipe)
-            elif modo == 'emergencial':
+            elif request.args.get("modo") == 'emergencial':
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
                 status_params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
             else:
@@ -1877,7 +1873,7 @@ def api_manutencao_por_tecnico():
         if equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
-        elif modo == 'emergencial':
+        elif request.args.get("modo") == 'emergencial':
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
             params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
         else:
@@ -2079,7 +2075,7 @@ def api_manutencao_por_cliente_org():
         elif equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
-        elif modo == 'emergencial':
+        elif request.args.get("modo") == 'emergencial':
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
             params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
         else:
@@ -2235,15 +2231,13 @@ def _add_date_filter(where, params):
         params.append(data_fim)
 
 
-def _mnt_equipe_filter(equipe, modo=None):
+def _mnt_equipe_filter(equipe, modo):
     """Retorna (where_clause, params_list) para filtro de app de Manutenção.
     Nota: o campo 'equipe' no banco armazena o nome do app (tipo de manutenção),
     não o cliente. Clientes reais: SEDUC, SEMED, SEMSA, SEDURB, UGPE, DPE, SEMEF."""
-    if modo is None:
-        modo = request.args.get("modo")
     if equipe:
         return "equipe = %s", [equipe]
-    elif modo == 'emergencial':
+    elif request.args.get("modo") == 'emergencial':
         return "equipe IN (%s, %s)", ["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."]
     else:
         return "equipe IN (%s, %s)", ["Manutenção - Técnicos", "Manutenção - Superv. Tec."]
@@ -2873,7 +2867,7 @@ def api_manutencao_stats():
             if equipe:
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
                 status_params.append(equipe)
-            elif modo == 'emergencial':
+            elif request.args.get("modo") == 'emergencial':
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
                 status_params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
             else:
@@ -2975,7 +2969,7 @@ def api_manutencao_por_tecnico():
         if equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
-        elif modo == 'emergencial':
+        elif request.args.get("modo") == 'emergencial':
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
             params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
         else:
@@ -3177,7 +3171,7 @@ def api_manutencao_por_cliente_org():
         elif equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
-        elif modo == 'emergencial':
+        elif request.args.get("modo") == 'emergencial':
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
             params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
         else:
