@@ -1,4 +1,4 @@
-"""
+ """
 Blueprint Flask com rotas de API REST para o Dashboard SASI.
 Endpoints JSON para o frontend HTML consumir via fetch().
 Usa psycopg2 (mesmo driver do main.py) para consultar Supabase.
