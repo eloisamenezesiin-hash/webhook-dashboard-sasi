@@ -327,6 +327,7 @@ body {
 </div>
 
 <script>
+let modoAtual = "";
 const API_BASE = window.location.origin;
 let chartCanais, chartTecnicos, chartClientes, chartMeses, chartClientesOrg;
 
@@ -338,6 +339,7 @@ function getParams() {
   if (equipe) p.set("equipe", equipe);
   if (di) p.set("data_inicio", di);
   if (df) p.set("data_fim", df);
+  if (modoAtual) p.set("modo", modoAtual);
   return p.toString() ? "?" + p.toString() : "";
 }
 
@@ -721,8 +723,9 @@ function trocarModo(modo) {
     if (modo === 'emergencial') {
         tabs[0].classList.remove('active');
         tabs[1].classList.add('active');
-        sel.value = 'Manutenção Emergencial - Técnicos';
+        sel.value = '';
         sel.style.display = 'none';
+        modoAtual = 'emergencial';
         document.querySelector('h1').textContent = 'Dashboard Emergencial';
         document.getElementById('subtitulo').textContent = 'Manutenção Emergencial - Técnicos';
     } else {
@@ -730,6 +733,7 @@ function trocarModo(modo) {
         tabs[0].classList.add('active');
         sel.value = '';
         sel.style.display = '';
+        modoAtual = '';
         document.querySelector('h1').textContent = 'Dashboard Técnicos Manutenção';
         document.getElementById('subtitulo').textContent = 'Monitoramento de serviços de saída';
     }
