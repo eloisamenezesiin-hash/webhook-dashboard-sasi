@@ -974,8 +974,12 @@ def api_manutencao_por_cliente_org():
         # Filtro de equipe (app de manutenção)
         # Usa Channel->>'name' pois Channel é um objeto JSON no webhook_logs
         if todos:
-            # Sem filtro de app - mostra todos os clientes (dashboard geral)
-            pass
+            # todos=1 mas respeita modo emergencial
+            if modo == 'emergencial' or (equipe and 'Emergencial' in equipe):
+                sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+                params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
+            else:
+                pass  # Sem filtro - mostra todos os clientes (dashboard geral)
         elif equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
@@ -2072,8 +2076,12 @@ def api_manutencao_por_cliente_org():
         # Filtro de equipe (app de manutenção)
         # Usa Channel->>'name' pois Channel é um objeto JSON no webhook_logs
         if todos:
-            # Sem filtro de app - mostra todos os clientes (dashboard geral)
-            pass
+            # todos=1 mas respeita modo emergencial
+            if modo == 'emergencial' or (equipe and 'Emergencial' in equipe):
+                sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+                params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
+            else:
+                pass  # Sem filtro - mostra todos os clientes (dashboard geral)
         elif equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
@@ -3170,8 +3178,12 @@ def api_manutencao_por_cliente_org():
         # Filtro de equipe (app de manutenção)
         # Usa Channel->>'name' pois Channel é um objeto JSON no webhook_logs
         if todos:
-            # Sem filtro de app - mostra todos os clientes (dashboard geral)
-            pass
+            # todos=1 mas respeita modo emergencial
+            if modo == 'emergencial' or (equipe and 'Emergencial' in equipe):
+                sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
+                params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
+            else:
+                pass  # Sem filtro - mostra todos os clientes (dashboard geral)
         elif equipe:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' = %s"
             params.append(equipe)
