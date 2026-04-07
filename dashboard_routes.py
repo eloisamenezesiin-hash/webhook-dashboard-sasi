@@ -605,7 +605,7 @@ def api_manutencao_stats():
         cur = conn.cursor()
 
         step = "filter"
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -817,7 +817,7 @@ def api_manutencao_por_cliente():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -869,7 +869,7 @@ def api_manutencao_por_canal():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause, "canal IS NOT NULL"]
         base_params = list(eq_params)
@@ -905,7 +905,7 @@ def api_manutencao_por_mes():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -1705,7 +1705,7 @@ def api_manutencao_stats():
         cur = conn.cursor()
 
         step = "filter"
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -1915,7 +1915,7 @@ def api_manutencao_por_cliente():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -1966,7 +1966,7 @@ def api_manutencao_por_canal():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause, "canal IS NOT NULL"]
         base_params = list(eq_params)
@@ -2001,7 +2001,7 @@ def api_manutencao_por_mes():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -2801,7 +2801,7 @@ def api_manutencao_stats():
         cur = conn.cursor()
 
         step = "filter"
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -3011,7 +3011,7 @@ def api_manutencao_por_cliente():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
@@ -3062,7 +3062,7 @@ def api_manutencao_por_canal():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause, "canal IS NOT NULL"]
         base_params = list(eq_params)
@@ -3097,7 +3097,7 @@ def api_manutencao_por_mes():
         conn = _get_conn()
         cur = conn.cursor()
 
-        eq_clause, eq_params = _mnt_equipe_filter(equipe, modo)
+        eq_clause, eq_params = _mnt_equipe_filter(equipe)
 
         base_where = [eq_clause]
         base_params = list(eq_params)
