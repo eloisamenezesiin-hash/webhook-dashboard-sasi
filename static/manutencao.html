@@ -737,6 +737,8 @@ function trocarModo(modo) {
         document.querySelector('h1').textContent = 'Dashboard Técnicos Manutenção';
         document.getElementById('subtitulo').textContent = 'Monitoramento de serviços de saída';
     }
+    // Esconder card Total Entrada no modo emergencial
+    document.getElementById('kpi-entrada').closest('.kpi-card').style.display = (modo === 'emergencial') ? 'none' : '';
     carregarTudo();
 }
 
