@@ -8,13 +8,72 @@ import os
 import csv
 import io
 import json
+import hashlib
+import logging
 from flask import Blueprint, jsonify, request, Response, send_from_directory
 
 import psycopg2
 
 dashboard_bp = Blueprint("dashboard", __name__)
+logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
+REDIS_URL = os.environ.get("REDIS_URL")
+
+# --- Cache Redis ---
+_redis_conn = None
+
+def _get_redis():
+    """Retorna conexão Redis singleton (lazy init). Retorna None se indisponível."""
+    global _redis_conn
+    if _redis_conn is not None:
+        return _redis_conn
+    if not REDIS_URL:
+        return None
+    try:
+        from redis import Redis
+        _redis_conn = Redis.from_url(REDIS_URL, decode_responses=True, socket_timeout=2)
+        _redis_conn.ping()
+        logger.info("Cache Redis conectado com sucesso")
+        return _redis_conn
+    except Exception as e:
+        logger.warning(f"Redis indisponível para cache: {e}")
+        _redis_conn = None
+        return None
+
+
+def _cache_key(endpoint: str) -> str:
+    """Gera chave de cache única baseada no endpoint + query string."""
+    qs = request.query_string.decode("utf-8")
+    raw = f"dash:{endpoint}:{qs}"
+    return "dash:" + hashlib.md5(raw.encode()).hexdigest()
+
+
+def _cache_get(endpoint: str):
+    """Tenta buscar resultado do cache. Retorna dict ou None."""
+    r = _get_redis()
+    if not r:
+        return None
+    try:
+        data = r.get(_cache_key(endpoint))
+        if data:
+            logger.debug(f"Cache HIT: {endpoint}")
+            return json.loads(data)
+    except Exception:
+        pass
+    return None
+
+
+def _cache_set(endpoint: str, data: dict, ttl: int = 300):
+    """Salva resultado no cache com TTL em segundos (padrão 5 min)."""
+    r = _get_redis()
+    if not r:
+        return
+    try:
+        r.setex(_cache_key(endpoint), ttl, json.dumps(data))
+        logger.debug(f"Cache SET: {endpoint} (TTL={ttl}s)")
+    except Exception:
+        pass
 
 
 def _get_conn():
@@ -233,7 +292,9 @@ def api_por_hora():
         conn.close()
 
         dados = [{"hora": str(int(h)) + "h", "total": t} for h, t in rows]
-        return jsonify({"dados": dados})
+        result = {"dados": dados}
+        _cache_set("mnt_mes", result, ttl=1800)
+        return jsonify(result)
     except Exception as e:
         return jsonify({"dados": [], "erro": str(e)})
 
@@ -596,6 +657,9 @@ def api_debug_find_status():
 @dashboard_bp.route("/api/manutencao/stats")
 def api_manutencao_stats():
     """KPIs focados em Manutenção: total saída, por técnico, por status."""
+    cached = _cache_get("mnt_stats")
+    if cached:
+        return jsonify(cached)
     equipe = request.args.get("equipe")
     modo = request.args.get("modo")
     step = "init"
@@ -697,13 +761,15 @@ def api_manutencao_stats():
         cur.close()
         conn.close()
 
-        return jsonify({
+        result = {
             "total_alertas": total,
             "total_saida": total_saida,
             "os_concluidas": os_concluidas,
             "os_pendentes": os_pendentes,
             "v": 14,
-        })
+        }
+        _cache_set("mnt_stats", result, ttl=300)
+        return jsonify(result)
     except Exception as e:
         import traceback
         return jsonify({
@@ -721,6 +787,9 @@ def api_manutencao_stats():
 @dashboard_bp.route("/api/manutencao/por-tecnico")
 def api_manutencao_por_tecnico():
     """Agrupa saídas concluídas por técnico (MobileProfile.name do webhook_logs)."""
+    cached = _cache_get("mnt_tecnico")
+    if cached:
+        return jsonify(cached)
     equipe = request.args.get("equipe")
     modo = request.args.get("modo")
     try:
@@ -799,7 +868,9 @@ def api_manutencao_por_tecnico():
         conn.close()
 
         tecnicos = [{"nome": r[0], "saidas": int(r[1])} for r in rows]
-        return jsonify({"tecnicos": tecnicos, "v": 14})
+        result = {"tecnicos": tecnicos, "v": 14}
+        _cache_set("mnt_tecnico", result, ttl=300)
+        return jsonify(result)
     except Exception as e:
         import traceback
         return jsonify({"tecnicos": [], "erro": str(e), "trace": traceback.format_exc()[-500:]})
@@ -808,9 +879,10 @@ def api_manutencao_por_tecnico():
 # ================================================================
 @dashboard_bp.route("/api/manutencao/por-cliente")
 def api_manutencao_por_cliente():
-    """Agrupa saídas por site_nome (unidade/site atendido).
-    Nota: 'por-cliente' é mantido na URL por compatibilidade, mas os dados
-    são unidades/sites, não clientes (SEDUC, SEMED, SEMSA, etc.)."""
+    """Agrupa saídas por site_nome (unidade/site atendido)."""
+    cached = _cache_get("mnt_cliente")
+    if cached:
+        return jsonify(cached)
     equipe = request.args.get("equipe")
     modo = request.args.get("modo")
     try:
@@ -852,7 +924,9 @@ def api_manutencao_por_cliente():
         cur.close()
         conn.close()
 
-        return jsonify({"por_site": por_site, "por_codigo": por_codigo})
+        result = {"por_site": por_site, "por_codigo": por_codigo}
+        _cache_set("mnt_cliente", result, ttl=300)
+        return jsonify(result)
     except Exception as e:
         return jsonify({"por_site": [], "por_codigo": [], "erro": str(e)})
 
@@ -863,6 +937,9 @@ def api_manutencao_por_cliente():
 @dashboard_bp.route("/api/manutencao/por-canal")
 def api_manutencao_por_canal():
     """Serviços por canal de saída."""
+    cached = _cache_get("mnt_canal")
+    if cached:
+        return jsonify(cached)
     equipe = request.args.get("equipe")
     modo = request.args.get("modo")
     try:
@@ -888,7 +965,9 @@ def api_manutencao_por_canal():
         conn.close()
 
         canais = [{"nome": r[0], "total": r[1]} for r in rows]
-        return jsonify({"canais": canais})
+        result = {"canais": canais}
+        _cache_set("mnt_canal", result, ttl=600)
+        return jsonify(result)
     except Exception as e:
         return jsonify({"canais": [], "erro": str(e)})
 
@@ -899,6 +978,9 @@ def api_manutencao_por_canal():
 @dashboard_bp.route("/api/manutencao/por-mes")
 def api_manutencao_por_mes():
     """Serviços de saída agrupados por mês."""
+    cached = _cache_get("mnt_mes")
+    if cached:
+        return jsonify(cached)
     equipe = request.args.get("equipe")
     modo = request.args.get("modo")
     try:
@@ -946,8 +1028,10 @@ def api_manutencao_por_mes():
 # ================================================================
 @dashboard_bp.route("/api/manutencao/por-cliente-org")
 def api_manutencao_por_cliente_org():
-    """Agrupa eventos por cliente/órgão (SEDUC, SEMED, SEMSA, etc.)
-    extraindo do campo Clientes dentro de dataView no raw_json."""
+    """Agrupa eventos por cliente/órgão (SEDUC, SEMED, SEMSA, etc.)."""
+    cached = _cache_get("mnt_cliente_org")
+    if cached:
+        return jsonify(cached)
     equipe = request.args.get("equipe")
     modo = request.args.get("modo")
     todos = request.args.get("todos")  # todos=1 retorna todos os apps (dashboard geral)
@@ -1008,7 +1092,9 @@ def api_manutencao_por_cliente_org():
         conn.close()
 
         clientes = [{"nome": r[0], "total": r[1]} for r in rows]
-        return jsonify({"clientes": clientes})
+        result = {"clientes": clientes}
+        _cache_set("mnt_cliente_org", result, ttl=300)
+        return jsonify(result)
     except Exception as e:
         import traceback
         return jsonify({
