@@ -22,6 +22,29 @@ def redis_test():
         info["redis_import"] = "ok"
     except ImportError as e:
         info["redis_import"] = str(e)
+        # --- Diagnostic: test cache functions directly ---
+    try:
+        from dashboard_routes import _cache_set, _cache_get, _cache_key
+        with app.test_request_context('/diag'):
+            try:
+                key = _cache_key("_diag_test")
+                info["diag_cache_key"] = key
+            except Exception as e:
+                info["diag_key_error"] = str(e)
+            try:
+                _cache_set("_diag_test", {"test": True, "n": 42}, ttl=60)
+                info["diag_cache_set"] = "ok"
+            except Exception as e:
+                info["diag_set_error"] = str(e)
+            try:
+                got = _cache_get("_diag_test")
+                info["diag_cache_get"] = got
+            except Exception as e:
+                info["diag_get_error"] = str(e)
+        if bp_r:
+            info["dash_keys_after"] = bp_r.keys("dash:*")[:20]
+    except ImportError as e:
+        info["diag_import_error"] = str(e)
         return jsonify(info)
     try:
         r = Redis.from_url(os.environ.get("REDIS_URL"), decode_responses=True, socket_timeout=2)
