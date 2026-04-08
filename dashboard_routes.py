@@ -70,7 +70,7 @@ def _cache_set(endpoint: str, data: dict, ttl: int = 300):
     if not r:
         return
     try:
-       r.setex(_cache_key(endpoint), ttl, json.dumps(data, default=str))
+        r.setex(_cache_key(endpoint), ttl, json.dumps(data, default=str))
         print(f"[CACHE] SET: {endpoint} (TTL={ttl}s)")
     except Exception as e:
         print(f"[CACHE ERROR] set {endpoint}: {e}")
