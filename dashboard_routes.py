@@ -57,10 +57,10 @@ def _cache_get(endpoint: str):
     try:
         data = r.get(_cache_key(endpoint))
         if data:
-            logger.info(f"Cache HIT: {endpoint}")
+            print(f"[CACHE] HIT: {endpoint}")
             return json.loads(data)
     except Exception as e:
-        logger.warning(f"Cache error: {e}")
+        print(f"[CACHE ERROR]: {e}")
     return None
 
 
@@ -71,9 +71,9 @@ def _cache_set(endpoint: str, data: dict, ttl: int = 300):
         return
     try:
         r.setex(_cache_key(endpoint), ttl, json.dumps(data, default=str))
-        logger.info(f"Cache SET: {endpoint} (TTL={ttl}s)")
+        print(f"[CACHE] SET: {endpoint} (TTL={ttl}s)")
     except Exception as e:
-        logger.warning(f"Cache error: {e}")
+        print(f"[CACHE ERROR]: {e}")
 
 
 def _get_conn():
