@@ -31,10 +31,25 @@ def redis_test():
         val = r.get("_debug_test")
         info["set_get"] = val
         info["status"] = "connected"
+        # List all dash:* keys
+        keys = r.keys("dash:*")
+        info["cache_keys"] = keys[:20]
+        info["cache_key_count"] = len(keys)
     except Exception as e:
         info["error"] = str(e)
         info["traceback"] = traceback.format_exc()
         info["status"] = "failed"
+    # Test blueprint's _get_redis
+    try:
+        from dashboard_routes import _get_redis, REDIS_URL as DR_REDIS_URL
+        info["blueprint_redis_url_set"] = bool(DR_REDIS_URL)
+        bp_r = _get_redis()
+        info["blueprint_get_redis"] = "connected" if bp_r else "None"
+        if bp_r:
+            bp_r.set("_bp_test", "world", ex=30)
+            info["blueprint_set_get"] = bp_r.get("_bp_test")
+    except Exception as e:
+        info["blueprint_error"] = str(e)
     return jsonify(info)
 
 # ── Auto-migração: adicionar coluna comunicante
