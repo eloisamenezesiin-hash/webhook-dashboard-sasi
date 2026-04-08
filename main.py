@@ -10,6 +10,33 @@ from dashboard_routes import dashboard_bp
 app = Flask(__name__)
 app.register_blueprint(dashboard_bp)
 
+
+# -- Rota temporaria para diagnostico Redis --
+@app.route("/redis-test")
+def redis_test():
+    import os, traceback
+    info = {"redis_url_set": bool(os.environ.get("REDIS_URL")),
+            "redis_url_prefix": (os.environ.get("REDIS_URL") or "")[:30]}
+    try:
+        from redis import Redis
+        info["redis_import"] = "ok"
+    except ImportError as e:
+        info["redis_import"] = str(e)
+        return jsonify(info)
+    try:
+        r = Redis.from_url(os.environ.get("REDIS_URL"), decode_responses=True, socket_timeout=2)
+        pong = r.ping()
+        info["ping"] = pong
+        r.set("_debug_test", "hello", ex=30)
+        val = r.get("_debug_test")
+        info["set_get"] = val
+        info["status"] = "connected"
+    except Exception as e:
+        info["error"] = str(e)
+        info["traceback"] = traceback.format_exc()
+        info["status"] = "failed"
+    return jsonify(info)
+
 # ── Auto-migração: adicionar coluna comunicante
 def _run_migrations():
     try:
