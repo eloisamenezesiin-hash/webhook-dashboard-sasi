@@ -41,9 +41,7 @@ def redis_test():
                 info["diag_cache_get"] = got
             except Exception as e:
                 info["diag_get_error"] = str(e)
-        if bp_r:
-            info["dash_keys_after"] = bp_r.keys("dash:*")[:20]
-    except ImportError as e:
+    except Exception as e:|
         info["diag_import_error"] = str(e)
         return jsonify(info)
     try:
