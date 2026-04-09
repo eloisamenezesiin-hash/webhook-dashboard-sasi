@@ -52,6 +52,7 @@ def _cache_key(endpoint: str) -> str:
 def _cache_get(endpoint: str):
     """Tenta buscar resultado do cache. Retorna dict ou None."""
     r = _get_redis()
+    print(f"[CACHE DEBUG] _cache_get({endpoint}), redis={r}")
     if not r:
         return None
     try:
