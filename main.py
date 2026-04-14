@@ -209,7 +209,12 @@ def webhook():
                 pass
 
 
-@app.route("/", methods=["GET"])
+@app.route("/")
+def redirect_to_dashboard():
+    from flask import redirect
+    return redirect("/static/index.html")
+    
+@app.route("/dashboard-antigo", methods=["GET"])
 def home():
     # Proteção do dashboard (se senha configurada)
     if DASHBOARD_PASSWORD:
