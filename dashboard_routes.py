@@ -2367,12 +2367,50 @@ import os
 import csv
 import io
 import json
+import hashlib
 from flask import Blueprint, jsonify, request, Response, send_from_directory
 
 import psycopg2
 
 dashboard_bp = Blueprint("dashboard", __name__)
+# --- Cache middleware (before/after request) ---
+@dashboard_bp.before_request
+def _check_cache():
+    if not request.path.startswith('/api/'):
+        return None
+    r = _get_redis()
+    if not r:
+        return None
+    qs = request.query_string.decode("utf-8")
+    key = "dash:" + hashlib.md5(f"cache:{request.path}:{qs}".encode()).hexdigest()
+    request._cache_key = key
+    try:
+        data = r.get(key)
+        if data:
+            print(f"[CACHE] HIT: {request.path}")
+            return Response(data, content_type='application/json')
+    except Exception as e:
+        print(f"[CACHE ERROR] before: {e}")
+    return None
 
+@dashboard_bp.after_request
+def _save_cache(response):
+    if not request.path.startswith('/api/'):
+        return response
+    if response.status_code != 200:
+        return response
+    key = getattr(request, '_cache_key', None)
+    if not key:
+        return response
+    r = _get_redis()
+    if not r:
+        return response
+    try:
+        r.setex(key, 300, response.get_data(as_text=True))
+        print(f"[CACHE] SET: {request.path} (TTL=300s)")
+    except Exception as e:
+        print(f"[CACHE ERROR] after: {e}")
+    return response
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
