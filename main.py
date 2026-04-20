@@ -11,67 +11,6 @@ app = Flask(__name__)
 app.register_blueprint(dashboard_bp)
 
 
-# -- Rota temporaria para diagnostico Redis --
-@app.route("/redis-test")
-def redis_test():
-    import os, traceback
-    info = {"redis_url_set": bool(os.environ.get("REDIS_URL")),
-            "redis_url_prefix": (os.environ.get("REDIS_URL") or "")[:30]}
-    try:
-        from redis import Redis
-        info["redis_import"] = "ok"
-    except ImportError as e:
-        info["redis_import"] = str(e)
-        # --- Diagnostic: test cache functions directly ---
-    try:
-        from dashboard_routes import _cache_set, _cache_get, _cache_key
-        with app.test_request_context('/diag'):
-            try:
-                key = _cache_key("_diag_test")
-                info["diag_cache_key"] = key
-            except Exception as e:
-                info["diag_key_error"] = str(e)
-            try:
-                _cache_set("_diag_test", {"test": True, "n": 42}, ttl=60)
-                info["diag_cache_set"] = "ok"
-            except Exception as e:
-                info["diag_set_error"] = str(e)
-            try:
-                got = _cache_get("_diag_test")
-                info["diag_cache_get"] = got
-            except Exception as e:
-                info["diag_get_error"] = str(e)
-    except Exception as e:
-        info["diag_import_error"] = str(e)
-        return jsonify(info)
-    try:
-        r = Redis.from_url(os.environ.get("REDIS_URL"), decode_responses=True, socket_timeout=2)
-        pong = r.ping()
-        info["ping"] = pong
-        r.set("_debug_test", "hello", ex=30)
-        val = r.get("_debug_test")
-        info["set_get"] = val
-        info["status"] = "connected"
-        # List all dash:* keys
-        keys = r.keys("dash:*")
-        info["cache_keys"] = keys[:20]
-        info["cache_key_count"] = len(keys)
-    except Exception as e:
-        info["error"] = str(e)
-        info["traceback"] = traceback.format_exc()
-        info["status"] = "failed"
-    # Test blueprint's _get_redis
-    try:
-        from dashboard_routes import _get_redis, REDIS_URL as DR_REDIS_URL
-        info["blueprint_redis_url_set"] = bool(DR_REDIS_URL)
-        bp_r = _get_redis()
-        info["blueprint_get_redis"] = "connected" if bp_r else "None"
-        if bp_r:
-            bp_r.set("_bp_test", "world", ex=30)
-            info["blueprint_set_get"] = bp_r.get("_bp_test")
-    except Exception as e:
-        info["blueprint_error"] = str(e)
-    return jsonify(info)
 
 # ── Auto-migração: adicionar coluna comunicante
 def _run_migrations():
