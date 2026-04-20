@@ -98,8 +98,8 @@ def _save_cache(response):
     if not r:
         return response
     try:
-        r.setex(key, 300, response.get_data(as_text=True))
-        print(f"[CACHE] SET: {request.path} (TTL=300s)")
+        r.setex(key, 30, response.get_data(as_text=True))
+        print(f"[CACHE] SET: {request.path} (TTL=30s)")
     except Exception as e:
         print(f"[CACHE ERROR] after: {e}")
     return response
