@@ -90,18 +90,6 @@ def esqueci_senha():
 <style>*{margin:0;font-family:Arial,sans-serif}body{background:#1e293b;display:flex;align-items:center;justify-content:center;min-height:100vh}.box{background:white;padding:40px;border-radius:12px;text-align:center;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.2)}h2{color:#1e293b;margin-bottom:8px}p{color:#64748b;margin-bottom:16px}input{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;box-sizing:border-box;margin-bottom:12px}button{width:100%;padding:10px;background:#2563eb;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer}a{color:#2563eb;text-decoration:none;font-size:13px}</style></head>
 <body><div class="box"><h2>Recuperar Senha</h2><p>Digite seu email cadastrado</p><form method="POST"><input name="email" type="email" placeholder="seu@email.com" required><button type="submit">Enviar</button></form><p style="margin-top:16px"><a href="/">Voltar ao login</a></p></div></body></html>"""
 
-def _invalidate_cache():
-    """Limpa cache do dashboard quando novos dados chegam."""
-    try:
-        from dashboard_routes import _get_redis
-        r = _get_redis()
-        if r:
-            keys = r.keys("dash:*")
-            if keys:
-                r.delete(*keys)
-                print(f"[CACHE] INVALIDATED {len(keys)} keys")
-    except Exception:
-        pass
 @app.route("/webhook", methods=["POST"])
 def webhook():
     # Rate limiting
@@ -145,13 +133,11 @@ def webhook():
             (raw,)
         )
         conn.commit()
-        _invalidate_cache()
         cur.close()
         return jsonify({"status": "ok", "destino": "banco"}), 200
 
     except Exception:
         _append_fila(raw or json.dumps(data))
-        _invalidate_cache()
         return jsonify({"status": "ok", "destino": "fila"}), 200
 
     finally:
