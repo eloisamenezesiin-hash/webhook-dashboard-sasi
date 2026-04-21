@@ -98,8 +98,9 @@ def _save_cache(response):
     if not r:
         return response
     try:
-        r.setex(key, 30, response.get_data(as_text=True))
-        print(f"[CACHE] SET: {request.path} (TTL=30s)")
+        ttl = 300 if '/manutencao/' in request.path else 30
+            r.setex(key, ttl, response.get_data(as_text=True))
+        print(f"[CACHE] SET: {request.path} (TTL={ttl}s)")
     except Exception as e:
         print(f"[CACHE ERROR] after: {e}")
     return response
