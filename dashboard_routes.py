@@ -8,6 +8,7 @@ import logging
 from flask import Blueprint, jsonify, request, Response, send_from_directory
 
 import psycopg2
+from psycopg2 import pool
 
 dashboard_bp = Blueprint("dashboard", __name__)
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ REDIS_URL = os.environ.get("REDIS_URL")
 _redis_conn = None
 
 def _get_redis():
-    """Retorna conexão Redis singleton (lazy init). Retorna None se indisponível."""
+    """Retorna conexÃ£o Redis singleton (lazy init). Retorna None se indisponÃ­vel."""
     global _redis_conn
     if _redis_conn is not None:
         return _redis_conn
@@ -31,12 +32,12 @@ def _get_redis():
         logger.info("Cache Redis conectado com sucesso")
         return _redis_conn
     except Exception as e:
-        logger.warning(f"Redis indisponível para cache: {e}")
+        logger.warning(f"Redis indisponÃ­vel para cache: {e}")
         _redis_conn = None
         return None
 
 def _cache_key(endpoint: str) -> str:
-    """Gera chave de cache única baseada no endpoint + query string."""
+    """Gera chave de cache Ãºnica baseada no endpoint + query string."""
     qs = request.query_string.decode("utf-8")
     raw = f"dash:{endpoint}:{qs}"
     return "dash:" + hashlib.md5(raw.encode()).hexdigest()
@@ -56,7 +57,7 @@ def _cache_get(endpoint: str):
     return None
 
 def _cache_set(endpoint: str, data: dict, ttl: int = 300):
-    """Salva resultado no cache com TTL em segundos (padrão 5 min)."""
+    """Salva resultado no cache com TTL em segundos (padrÃ£o 5 min)."""
     r = _get_redis()
     if not r:
         return
@@ -105,10 +106,39 @@ def _save_cache(response):
         print(f"[CACHE ERROR] after: {e}")
     return response
 DATABASE_URL = os.environ.get("DATABASE_URL")
+DEBUG_MODE = os.environ.get("DEBUG_MODE", "").lower() == "true"
 
+
+# --- Connection Pool ---
+_db_pool = None
+
+def _get_pool():
+    global _db_pool
+    if _db_pool is not None:
+        return _db_pool
+    try:
+        _db_pool = pool.SimpleConnectionPool(1, 5, DATABASE_URL)
+        logger.info("Connection pool criado (min=1, max=5)")
+        return _db_pool
+    except Exception as e:
+        logger.error(f"Erro ao criar connection pool: {e}")
+        return None
 
 def _get_conn():
+    p = _get_pool()
+    if p:
+        conn = p.getconn()
+        conn._from_pool = True
+        return conn
     return psycopg2.connect(DATABASE_URL)
+
+def _put_conn(conn):
+    if getattr(conn, '_from_pool', False):
+        p = _get_pool()
+        if p:
+            p.putconn(conn)
+            return
+    conn.close()
 
 
 def _add_date_filter(where, params):
@@ -124,17 +154,17 @@ def _add_date_filter(where, params):
 
 
 def _mnt_equipe_filter(equipe, modo=None):
-    """Retorna (where_clause, params_list) para filtro de app de Manutenção.
-    Nota: o campo 'equipe' no banco armazena o nome do app (tipo de manutenção),
-    não o cliente. Clientes reais: SEDUC, SEMED, SEMSA, SEDURB, UGPE, DPE, SEMEF."""
+    """Retorna (where_clause, params_list) para filtro de app de ManutenÃ§Ã£o.
+    Nota: o campo 'equipe' no banco armazena o nome do app (tipo de manutenÃ§Ã£o),
+    nÃ£o o cliente. Clientes reais: SEDUC, SEMED, SEMSA, SEDURB, UGPE, DPE, SEMEF."""
     if modo is None:
         modo = request.args.get("modo")
     if equipe:
         return "equipe = %s", [equipe]
     elif request.args.get("modo") == 'emergencial':
-        return "equipe IN (%s, %s)", ["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."]
+        return "equipe IN (%s, %s)", ["ManutenÃ§Ã£o Emergencial - TÃ©cnicos", "ManutenÃ§Ã£o Emergencial - Superv."]
     else:
-        return "equipe IN (%s, %s)", ["Manutenção - Técnicos", "Manutenção - Superv. Tec."]
+        return "equipe IN (%s, %s)", ["ManutenÃ§Ã£o - TÃ©cnicos", "ManutenÃ§Ã£o - Superv. Tec."]
 
 
 # ================================================================
@@ -192,7 +222,7 @@ def api_stats():
         equipes_ativas = cur.fetchone()[0]
 
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         return jsonify({
             "total_alertas": total,
@@ -234,7 +264,7 @@ def api_por_canal():
         )
         rows = cur.fetchall()
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         cores = {
             "CHEGADA NO LOCAL": "#2563eb",
@@ -260,11 +290,11 @@ def api_por_canal():
 
 
 # ================================================================
-# 3. /api/dashboard/por-equipe - Grafico horizontal (apps de manutenção)
+# 3. /api/dashboard/por-equipe - Grafico horizontal (apps de manutenÃ§Ã£o)
 # ================================================================
 @dashboard_bp.route("/api/dashboard/por-equipe")
 def api_por_equipe():
-    """Eventos por app (tipo de manutenção). Campo 'equipe' = app no banco."""
+    """Eventos por app (tipo de manutenÃ§Ã£o). Campo 'equipe' = app no banco."""
     canal = request.args.get("canal")
     try:
         conn = _get_conn()
@@ -283,7 +313,7 @@ def api_por_equipe():
         )
         rows = cur.fetchall()
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         equipes = {}
         for eq, total in rows:
@@ -321,7 +351,7 @@ def api_por_hora():
         )
         rows = cur.fetchall()
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         dados = [{"hora": str(int(h)) + "h", "total": t} for h, t in rows]
         return jsonify({"dados": dados})
@@ -358,7 +388,7 @@ def api_por_dia():
         )
         rows = cur.fetchall()
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         dados = [
             {"dia": str(d), "dia_formatado": d.strftime("%d/%m"), "total": t}
@@ -399,7 +429,7 @@ def api_eventos_recentes():
         )
         rows = cur.fetchall()
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         eventos = []
         for data, cn, tipo, eq, site, msg, comunicante in rows:
@@ -455,7 +485,7 @@ def api_resumo():
         total_7d = cur.fetchone()[0]
 
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         return jsonify({
             "total_registros": total,
@@ -490,7 +520,7 @@ def api_filtros():
         )
         equipes = [r[0] for r in cur.fetchall()]
         cur.close()
-        conn.close()
+        _put_conn(conn)
         return jsonify({"canais": canais, "equipes": equipes, "apps": equipes})
     except Exception as e:
         return jsonify({"canais": [], "equipes": [], "erro": str(e)})
@@ -524,7 +554,7 @@ def api_exportar():
         )
         rows = cur.fetchall()
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         output = io.StringIO()
         output.write("\ufeff")
@@ -553,7 +583,9 @@ def api_exportar():
 # ================================================================
 @dashboard_bp.route("/api/debug/raw-sample")
 def api_debug_raw():
-    """Retorna amostras do raw_json da tabela webhook_logs para análise."""
+    """Retorna amostras do raw_json da tabela webhook_logs para anÃ¡lise."""
+    if not DEBUG_MODE:
+        return jsonify({"erro": "Debug desabilitado em producao"}), 403
     try:
         conn = _get_conn()
         cur = conn.cursor()
@@ -578,16 +610,16 @@ def api_debug_raw():
         )
         rows = cur.fetchall()
 
-        # Buscar amostras de registros com comunicante (Saída)
+        # Buscar amostras de registros com comunicante (SaÃ­da)
         cur.execute(
             "SELECT data, canal, tipo, equipe, site_nome, mensagem, comunicante "
-            "FROM registros WHERE canal LIKE 'Saída%' OR canal LIKE 'Sa_da%' "
+            "FROM registros WHERE canal LIKE 'SaÃ­da%' OR canal LIKE 'Sa_da%' "
             "ORDER BY data DESC LIMIT 5"
         )
         reg_rows = cur.fetchall()
 
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         samples = []
         for row_id, raw in rows:
@@ -631,6 +663,8 @@ def api_debug_raw():
 @dashboard_bp.route("/api/debug/find-status")
 def api_debug_find_status():
     """Busca registros com status_do_servico e mostra estrutura JSON completa."""
+    if not DEBUG_MODE:
+        return jsonify({"erro": "Debug desabilitado em producao"}), 403
     try:
         conn = _get_conn()
         cur = conn.cursor()
@@ -641,7 +675,7 @@ def api_debug_find_status():
         )
         rows = cur.fetchall()
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         results = []
         for row_id, raw in rows:
@@ -682,11 +716,11 @@ def api_debug_find_status():
 
 
 # ================================================================
-# 10. /api/manutencao/stats - KPIs do Dashboard Manutenção (Saída)
+# 10. /api/manutencao/stats - KPIs do Dashboard ManutenÃ§Ã£o (SaÃ­da)
 # ================================================================
 @dashboard_bp.route("/api/manutencao/stats")
 def api_manutencao_stats():
-    """KPIs focados em Manutenção: total saída, por técnico, por status."""
+    """KPIs focados em ManutenÃ§Ã£o: total saÃ­da, por tÃ©cnico, por status."""
     equipe = request.args.get("equipe")
     step = "init"
     try:
@@ -709,7 +743,7 @@ def api_manutencao_stats():
 
         step = "saida"
         cur.execute(sql_total + " AND (canal LIKE %s OR canal LIKE %s)",
-                    base_params + ["Saída%", "Sa_da%"])
+                    base_params + ["SaÃ­da%", "Sa_da%"])
         total_saida = cur.fetchone()[0]
 
         # Contar OS por status no webhook_logs
@@ -763,10 +797,10 @@ def api_manutencao_stats():
                 status_params.append(equipe)
             elif request.args.get("modo") == 'emergencial':
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
-                status_params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
+                status_params.extend(["ManutenÃ§Ã£o Emergencial - TÃ©cnicos", "ManutenÃ§Ã£o Emergencial - Superv."])
             else:
                 status_sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
-                status_params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
+                status_params.extend(["ManutenÃ§Ã£o - TÃ©cnicos", "ManutenÃ§Ã£o - Superv. Tec."])
 
         # Filtro de data (usa campo data da tabela webhook_logs)
         data_inicio = request.args.get("data_inicio")
@@ -785,7 +819,7 @@ def api_manutencao_stats():
         os_pendentes = int(row[1] or 0) if row else 0
 
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         return jsonify({
             "total_alertas": total,
@@ -795,28 +829,25 @@ def api_manutencao_stats():
             "v": 14,
         })
     except Exception as e:
-        import traceback
         return jsonify({
-            "erro": str(e),
-            "step": step,
-            "trace": traceback.format_exc()[-500:],
+            "erro": str(e)
             "total_alertas": 0, "total_saida": 0,
             "os_concluidas": 0, "os_pendentes": 0,
         })
 
 
 # ================================================================
-# 11. /api/manutencao/por-tecnico - Saídas concluídas por técnico
+# 11. /api/manutencao/por-tecnico - SaÃ­das concluÃ­das por tÃ©cnico
 # ================================================================
 @dashboard_bp.route("/api/manutencao/por-tecnico")
 def api_manutencao_por_tecnico():
-    """Agrupa saídas concluídas por técnico (MobileProfile.name do webhook_logs)."""
+    """Agrupa saÃ­das concluÃ­das por tÃ©cnico (MobileProfile.name do webhook_logs)."""
     equipe = request.args.get("equipe")
     try:
         conn = _get_conn()
         cur = conn.cursor()
 
-        # Buscar técnico e status diretamente do webhook_logs JSON
+        # Buscar tÃ©cnico e status diretamente do webhook_logs JSON
         # Emergencial usa campo unico "status_do_servico"
         # Manutencao usa campos "status_do_servico_id_1" ate "id_5"
         is_emergencial = equipe and "Emergencial" in equipe
@@ -865,10 +896,10 @@ def api_manutencao_por_tecnico():
             params.append(equipe)
         elif request.args.get("modo") == 'emergencial':
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
-            params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
+            params.extend(["ManutenÃ§Ã£o Emergencial - TÃ©cnicos", "ManutenÃ§Ã£o Emergencial - Superv."])
         else:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
-            params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
+            params.extend(["ManutenÃ§Ã£o - TÃ©cnicos", "ManutenÃ§Ã£o - Superv. Tec."])
 
         # Filtro de data
         data_inicio = request.args.get("data_inicio")
@@ -885,21 +916,20 @@ def api_manutencao_por_tecnico():
         rows = cur.fetchall()
 
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         tecnicos = [{"nome": r[0], "saidas": int(r[1])} for r in rows]
         return jsonify({"tecnicos": tecnicos, "v": 14})
     except Exception as e:
-        import traceback
-        return jsonify({"tecnicos": [], "erro": str(e), "trace": traceback.format_exc()[-500:]})
+        return jsonify({"tecnicos": [], "erro": str(e)})
 # ================================================================
-# 12. /api/manutencao/por-cliente - Saídas agrupadas por unidade/site
+# 12. /api/manutencao/por-cliente - SaÃ­das agrupadas por unidade/site
 # ================================================================
 @dashboard_bp.route("/api/manutencao/por-cliente")
 def api_manutencao_por_cliente():
-    """Agrupa saídas por site_nome (unidade/site atendido).
-    Nota: 'por-cliente' é mantido na URL por compatibilidade, mas os dados
-    são unidades/sites, não clientes (SEDUC, SEMED, SEMSA, etc.)."""
+    """Agrupa saÃ­das por site_nome (unidade/site atendido).
+    Nota: 'por-cliente' Ã© mantido na URL por compatibilidade, mas os dados
+    sÃ£o unidades/sites, nÃ£o clientes (SEDUC, SEMED, SEMSA, etc.)."""
     equipe = request.args.get("equipe")
     try:
         conn = _get_conn()
@@ -913,7 +943,7 @@ def api_manutencao_por_cliente():
         w = " WHERE " + " AND ".join(base_where)
 
         # Por site_nome
-        site_params = base_params + ["Saída%", "Sa_da%"]
+        site_params = base_params + ["SaÃ­da%", "Sa_da%"]
         cur.execute(
             "SELECT site_nome, COUNT(*) as total FROM registros" + w +
             " AND (canal LIKE %s OR canal LIKE %s)"
@@ -923,8 +953,8 @@ def api_manutencao_por_cliente():
         )
         por_site = [{"nome": r[0], "total": r[1]} for r in cur.fetchall()]
 
-        # Por código @@NNN extraído da mensagem
-        cod_params = base_params + ["Saída%", "Sa_da%"]
+        # Por cÃ³digo @@NNN extraÃ­do da mensagem
+        cod_params = base_params + ["SaÃ­da%", "Sa_da%"]
         cur.execute(
             "SELECT "
             "  SUBSTRING(mensagem FROM '@@[0-9]+') as cod_unidade, "
@@ -938,7 +968,7 @@ def api_manutencao_por_cliente():
         por_codigo = [{"codigo": r[0], "total": r[1]} for r in cur.fetchall()]
 
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         return jsonify({"por_site": por_site, "por_codigo": por_codigo})
     except Exception as e:
@@ -946,11 +976,11 @@ def api_manutencao_por_cliente():
 
 
 # ================================================================
-# 13. /api/manutencao/por-canal - Saídas agrupadas por canal
+# 13. /api/manutencao/por-canal - SaÃ­das agrupadas por canal
 # ================================================================
 @dashboard_bp.route("/api/manutencao/por-canal")
 def api_manutencao_por_canal():
-    """Serviços por canal de saída."""
+    """ServiÃ§os por canal de saÃ­da."""
     equipe = request.args.get("equipe")
     try:
         conn = _get_conn()
@@ -963,7 +993,7 @@ def api_manutencao_por_canal():
         _add_date_filter(base_where, base_params)
         w = " WHERE " + " AND ".join(base_where)
 
-        canal_params = base_params + ["Saída%", "Sa_da%"]
+        canal_params = base_params + ["SaÃ­da%", "Sa_da%"]
         cur.execute(
             "SELECT canal, COUNT(*) as total FROM registros" + w +
             " AND (canal LIKE %s OR canal LIKE %s)"
@@ -972,7 +1002,7 @@ def api_manutencao_por_canal():
         )
         rows = cur.fetchall()
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         canais = [{"nome": r[0], "total": r[1]} for r in rows]
         return jsonify({"canais": canais})
@@ -981,11 +1011,11 @@ def api_manutencao_por_canal():
 
 
 # ================================================================
-# 14. /api/manutencao/por-mes - Serviços por mês
+# 14. /api/manutencao/por-mes - ServiÃ§os por mÃªs
 # ================================================================
 @dashboard_bp.route("/api/manutencao/por-mes")
 def api_manutencao_por_mes():
-    """Serviços de saída agrupados por mês."""
+    """ServiÃ§os de saÃ­da agrupados por mÃªs."""
     equipe = request.args.get("equipe")
     try:
         conn = _get_conn()
@@ -998,7 +1028,7 @@ def api_manutencao_por_mes():
         _add_date_filter(base_where, base_params)
         w = " WHERE " + " AND ".join(base_where)
 
-        mes_params = base_params + ["Saída%", "Sa_da%"]
+        mes_params = base_params + ["SaÃ­da%", "Sa_da%"]
         cur.execute(
             "SELECT TO_CHAR(data, 'YYYY-MM') as mes, COUNT(*) as total "
             "FROM registros" + w +
@@ -1009,7 +1039,7 @@ def api_manutencao_por_mes():
         )
         rows = cur.fetchall()
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         meses_pt = {
             "01": "Jan", "02": "Fev", "03": "Mar", "04": "Abr",
@@ -1032,7 +1062,7 @@ def api_manutencao_por_mes():
 # ================================================================
 @dashboard_bp.route("/api/manutencao/por-cliente-org")
 def api_manutencao_por_cliente_org():
-    """Agrupa eventos por cliente/órgão (SEDUC, SEMED, SEMSA, etc.)
+    """Agrupa eventos por cliente/Ã³rgÃ£o (SEDUC, SEMED, SEMSA, etc.)
     extraindo do campo Clientes dentro de dataView no raw_json."""
     equipe = request.args.get("equipe")
     modo = request.args.get("modo")
@@ -1057,13 +1087,13 @@ def api_manutencao_por_cliente_org():
         """
         params = []
 
-        # Filtro de equipe (app de manutenção)
-        # Usa Channel->>'name' pois Channel é um objeto JSON no webhook_logs
+        # Filtro de equipe (app de manutenÃ§Ã£o)
+        # Usa Channel->>'name' pois Channel Ã© um objeto JSON no webhook_logs
         if todos:
             # todos=1 mas respeita modo emergencial
             if modo == 'emergencial' or (equipe and 'Emergencial' in equipe):
                 sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
-                params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
+                params.extend(["ManutenÃ§Ã£o Emergencial - TÃ©cnicos", "ManutenÃ§Ã£o Emergencial - Superv."])
             else:
                 pass  # Sem filtro - mostra todos os clientes (dashboard geral)
         elif equipe:
@@ -1071,10 +1101,10 @@ def api_manutencao_por_cliente_org():
             params.append(equipe)
         elif request.args.get("modo") == 'emergencial':
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
-            params.extend(["Manutenção Emergencial - Técnicos", "Manutenção Emergencial - Superv."])
+            params.extend(["ManutenÃ§Ã£o Emergencial - TÃ©cnicos", "ManutenÃ§Ã£o Emergencial - Superv."])
         else:
             sql += " AND raw_json::jsonb->'data'->'Group'->>'name' IN (%s, %s)"
-            params.extend(["Manutenção - Técnicos", "Manutenção - Superv. Tec."])
+            params.extend(["ManutenÃ§Ã£o - TÃ©cnicos", "ManutenÃ§Ã£o - Superv. Tec."])
 
         # Filtro de data
         data_inicio = request.args.get("data_inicio")
@@ -1091,16 +1121,14 @@ def api_manutencao_por_cliente_org():
         rows = cur.fetchall()
 
         cur.close()
-        conn.close()
+        _put_conn(conn)
 
         clientes = [{"nome": r[0], "total": r[1]} for r in rows]
         return jsonify({"clientes": clientes})
     except Exception as e:
-        import traceback
         return jsonify({
             "clientes": [],
             "erro": str(e),
-            "trace": traceback.format_exc()[-500:]
         })
 
 
@@ -1110,11 +1138,13 @@ def api_manutencao_por_cliente_org():
 @dashboard_bp.route("/api/debug/find-clientes")
 def api_debug_find_clientes():
     """Busca o campo 'Clientes' ou 'clientes' dentro do raw_json."""
+    if not DEBUG_MODE:
+        return jsonify({"erro": "Debug desabilitado em producao"}), 403
     try:
         conn = _get_conn()
         cur = conn.cursor()
 
-        # Tentar vários caminhos possíveis
+        # Tentar vÃ¡rios caminhos possÃ­veis
         caminhos = {
             "data->dataView": """
                 SELECT elem->'value'->>0, elem->>'title'
@@ -1169,7 +1199,7 @@ def api_debug_find_clientes():
                 resultados[nome] = {"erro": str(e)}
 
         cur.close()
-        conn.close()
+        _put_conn(conn)
         return jsonify(resultados)
     except Exception as e:
         return jsonify({"erro": str(e)})
@@ -1180,13 +1210,13 @@ def api_debug_find_clientes():
 # ================================================================
 @dashboard_bp.route("/health")
 def health_check():
-    """Endpoint de health check. Testa conexão com o banco."""
+    """Endpoint de health check. Testa conexÃ£o com o banco."""
     try:
         conn = _get_conn()
         cur = conn.cursor()
         cur.execute("SELECT 1")
         cur.close()
-        conn.close()
+        _put_conn(conn)
         return jsonify({"status": "ok", "database": "connected"})
     except Exception as e:
         return jsonify({"status": "error", "database": str(e)}), 503
